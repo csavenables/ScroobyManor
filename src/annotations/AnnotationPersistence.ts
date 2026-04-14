@@ -22,9 +22,16 @@ function supportsFileAccessApi(): boolean {
 
 export class AnnotationPersistence {
   async load(sceneId: string): Promise<AnnotationsConfig | null> {
-    if (!supportsFileAccessApi()) {
-      return null;
+    if (supportsFileAccessApi()) {
+      const handleAnnotations = await this.loadFromHandle(sceneId);
+      if (handleAnnotations) {
+        return handleAnnotations;
+      }
     }
+    return this.loadBundled(sceneId);
+  }
+
+  private async loadFromHandle(sceneId: string): Promise<AnnotationsConfig | null> {
     const handle = await this.getHandle(sceneId);
     if (!handle) {
       return null;
@@ -39,11 +46,48 @@ export class AnnotationPersistence {
     try {
       const file = await handle.getFile();
       const text = await file.text();
-      const parsed = JSON.parse(text) as unknown;
-      if (!isObject(parsed) || !isObject(parsed.annotations)) {
+      return this.parseAnnotationsPayload(text);
+    } catch {
+      return null;
+    }
+  }
+
+  private async loadBundled(sceneId: string): Promise<AnnotationsConfig | null> {
+    const candidates = [
+      `scenes/${sceneId}/annotations.json`,
+      `${sceneId}.annotations.json`,
+    ];
+    for (const relativePath of candidates) {
+      try {
+        const response = await fetch(relativePath, { cache: 'no-store' });
+        if (!response.ok) {
+          continue;
+        }
+        const payload = await response.text();
+        const parsed = this.parseAnnotationsPayload(payload);
+        if (parsed) {
+          return parsed;
+        }
+      } catch {
+        // Try next candidate.
+      }
+    }
+    return null;
+  }
+
+  private parseAnnotationsPayload(payload: string): AnnotationsConfig | null {
+    try {
+      const parsed = JSON.parse(payload) as unknown;
+      if (!isObject(parsed)) {
         return null;
       }
-      return parsed.annotations as unknown as AnnotationsConfig;
+      if (isObject(parsed.annotations)) {
+        return parsed.annotations as unknown as AnnotationsConfig;
+      }
+      if (isObject(parsed) && Array.isArray(parsed.pins) && isObject(parsed.ui)) {
+        return parsed as unknown as AnnotationsConfig;
+      }
+      return null;
     } catch {
       return null;
     }

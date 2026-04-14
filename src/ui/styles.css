@@ -34,6 +34,11 @@
   --shell-muted: #667287;
   --shell-border: rgb(20 35 55 / 14%);
   --shell-panel-bg: rgb(255 255 255 / 92%);
+  --radius-pill: 14px;
+  --radius-panel: 0.375rem;
+  --radius-control: 0.225rem;
+  --radius-input: 0.175rem;
+  --radius-tooltip: 0.275rem;
 }
 
 * {
@@ -172,7 +177,7 @@ body,
   border: 1px solid rgb(255 255 255 / 64%);
   background: rgb(255 255 255 / 14%);
   color: #fff;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 0.64rem 1.42rem;
   font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
   font-size: 1.3rem;
@@ -217,11 +222,12 @@ body,
   height: 30px;
   margin-left: -15px;
   margin-top: -15px;
-  border-radius: 999px;
-  border: 1px solid rgb(255 255 255 / 70%);
-  background: rgb(14 20 32 / 85%);
-  color: var(--text);
-  font-size: 0.74rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--shell-border);
+  background: rgb(255 255 255 / 94%);
+  color: #000;
+  font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  font-size: 0.82rem;
   font-weight: 600;
   pointer-events: auto;
   cursor: pointer;
@@ -233,8 +239,9 @@ body,
 }
 
 .annotation-pin.is-selected {
-  border-color: rgb(34 193 195 / 92%);
-  background: rgb(17 36 46 / 92%);
+  border-color: rgb(20 35 55 / 40%);
+  background: #fff;
+  box-shadow: 0 0 0 1px rgb(20 35 55 / 12%);
 }
 
 .annotation-pin.is-occluded {
@@ -245,22 +252,25 @@ body,
   position: absolute;
   width: min(260px, calc(100vw - 24px));
   padding: 0.65rem 0.7rem;
-  border: 1px solid rgb(255 255 255 / 16%);
-  border-radius: 0.55rem;
-  background: rgb(14 21 34 / 88%);
+  border: 1px solid var(--shell-border);
+  border-radius: var(--radius-tooltip);
+  background: rgb(255 255 255 / 95%);
   backdrop-filter: blur(8px);
   pointer-events: none;
 }
 
 .annotation-tooltip-title {
   margin: 0 0 0.25rem;
-  font-size: 0.82rem;
+  color: #000;
+  font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  font-size: 0.9rem;
 }
 
 .annotation-tooltip-body {
   margin: 0;
-  color: var(--muted);
-  font-size: 0.75rem;
+  color: #3a4a61;
+  font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  font-size: 0.8rem;
   line-height: 1.35;
 }
 
@@ -280,9 +290,10 @@ body,
   border: 1px solid var(--shell-border);
   background: rgb(255 255 255 / 92%);
   color: #000;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 0.42rem 0.55rem;
-  font-size: 0.78rem;
+  font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  font-size: 0.88rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
@@ -316,7 +327,7 @@ body,
   width: min(220px, 42vw);
   padding: 0.55rem;
   border: 1px solid var(--shell-border);
-  border-radius: 0.6rem;
+  border-radius: 0.3rem;
   background: var(--shell-panel-bg);
   backdrop-filter: blur(8px);
   color: var(--shell-text);
@@ -355,7 +366,7 @@ body,
   overflow: auto;
   padding: 0.7rem;
   border: 1px solid var(--shell-border);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-panel);
   background: rgb(255 255 255 / 95%);
   color: #000;
   backdrop-filter: blur(6px);
@@ -372,7 +383,7 @@ body,
   flex: 1;
   min-width: 0;
   border: 1px solid rgb(20 35 55 / 18%);
-  border-radius: 0.35rem;
+  border-radius: var(--radius-input);
   background: #fff;
   color: #000;
   padding: 0.3rem 0.38rem;
@@ -441,7 +452,7 @@ body,
   border: 1px solid var(--shell-border);
   background: #fff;
   color: var(--shell-text);
-  border-radius: 0.45rem;
+  border-radius: var(--radius-control);
   padding: 0.35rem 0.5rem;
   font-size: 0.78rem;
   text-align: left;
@@ -487,7 +498,7 @@ body,
   border: 1px solid var(--shell-border);
   background: rgb(255 255 255 / 92%);
   color: #000;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 0.42rem 0.92rem;
   font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
   font-size: 0.95rem;
@@ -524,7 +535,7 @@ body,
   border: 1px solid rgb(255 255 255 / 48%);
   background: rgb(12 20 30 / 70%);
   color: var(--text);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 0.42rem 0.72rem;
   font-size: 0.75rem;
   letter-spacing: 0.02em;
@@ -562,7 +573,7 @@ body,
   border: 1px solid var(--shell-border);
   background: #fff;
   color: var(--shell-text);
-  border-radius: 0.45rem;
+  border-radius: var(--radius-control);
   padding: 0.45rem 0.7rem;
   font-size: 0.8rem;
   cursor: pointer;
@@ -619,7 +630,7 @@ body,
   padding: 0.75rem;
   border: 1px solid rgb(208 69 91 / 45%);
   background: rgb(208 69 91 / 12%);
-  border-radius: 0.5rem;
+  border-radius: 0.25rem;
 }
 
 .error-title {
