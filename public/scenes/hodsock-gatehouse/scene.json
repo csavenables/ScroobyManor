@@ -62,10 +62,10 @@
     "firstLoadIntroParticleCount": 900,
     "firstLoadParticleDurationMs": 900,
     "firstLoadDisableStaticPointCloud": true,
-    "maxDevicePixelRatio": 2
+    "maxDevicePixelRatio": 2.5
   },
   "sogRuntime": {
-    "unified": true,
+    "unified": false,
     "highQualitySH": true,
     "splatBudget": 0,
     "lodBaseDistance": 4.8,

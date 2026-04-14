@@ -146,6 +146,8 @@ export class GaussianSplatRenderer implements SplatRenderer {
   };
   private runtimeConfig: SogRuntimeConfig = { ...DEFAULT_SOG_RUNTIME };
   private maxDevicePixelRatio = 1.25;
+  private lastViewportWidth = 0;
+  private lastViewportHeight = 0;
 
   async initialize(context: RendererContext): Promise<void> {
     this.context = context;
@@ -196,6 +198,8 @@ export class GaussianSplatRenderer implements SplatRenderer {
 
     this.applyRuntimeConfigToScene();
     this.applyPixelRatio();
+    app.setCanvasFillMode(pc.FILLMODE_NONE, context.rootElement.clientWidth, context.rootElement.clientHeight);
+    app.setCanvasResolution(pc.RESOLUTION_AUTO, context.rootElement.clientWidth, context.rootElement.clientHeight);
     this.syncViewportAndCamera();
 
     app.start();
@@ -204,9 +208,7 @@ export class GaussianSplatRenderer implements SplatRenderer {
 
   configureScene(config: SceneConfig): void {
     this.runtimeConfig = cloneRuntimeConfig(config.sogRuntime);
-    this.maxDevicePixelRatio = config.performanceProfile.enabled
-      ? Math.max(0.75, config.performanceProfile.maxDevicePixelRatio)
-      : 1.25;
+    this.maxDevicePixelRatio = Math.max(0.75, config.performanceProfile.maxDevicePixelRatio);
     this.applyRuntimeConfigToScene();
     this.applyPixelRatio();
     for (const handle of this.handles) {
@@ -563,7 +565,13 @@ export class GaussianSplatRenderer implements SplatRenderer {
     const width = Math.max(1, this.context.rootElement.clientWidth);
     const height = Math.max(1, this.context.rootElement.clientHeight);
     this.applyPixelRatio();
-    this.app.resizeCanvas(width, height);
+    if (width !== this.lastViewportWidth || height !== this.lastViewportHeight) {
+      this.lastViewportWidth = width;
+      this.lastViewportHeight = height;
+      this.app.setCanvasFillMode(pc.FILLMODE_NONE, width, height);
+      this.app.setCanvasResolution(pc.RESOLUTION_AUTO, width, height);
+      this.app.resizeCanvas(width, height);
+    }
 
     const sourceCamera = this.context.camera;
     this.cameraEntity.setPosition(sourceCamera.position.x, sourceCamera.position.y, sourceCamera.position.z);

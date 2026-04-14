@@ -271,9 +271,7 @@ export class Viewer {
   private applySceneConfig(config: SceneConfig): void {
     this.cameraController.applyLimits(config.camera.limits, config.ui.enablePan);
     this.fitCameraToContent(config);
-    const maxDpr = config.performanceProfile.enabled
-      ? Math.max(0.75, config.performanceProfile.maxDevicePixelRatio)
-      : 2;
+    const maxDpr = Math.max(0.75, config.performanceProfile.maxDevicePixelRatio);
     this.webglRenderer.setPixelRatio(Math.min(window.devicePixelRatio, maxDpr));
     this.syncViewport();
     this.currentIdleRotateSpeed = config.presentation.idleRotateSpeed;
