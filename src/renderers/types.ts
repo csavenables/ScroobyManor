@@ -60,7 +60,9 @@ export const REVEAL_CONFIG_DEFAULTS: RevealConfig = {
   bottomSphere: {
     durationMs: 1900,
     feather: 0.18,
+    originAnchor: 'bottom',
     originYOffset: 0,
+    originHeightScale: 0,
     maxRadiusScale: 1.08,
   },
   bottomClip: {

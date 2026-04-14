@@ -20,6 +20,7 @@ export interface SceneManagerEvents {
 
 export interface RevealHookOptions {
   reducedMotion?: boolean;
+  revealOverride?: RevealConfig;
   beforeRevealIn?: (ctx: {
     handle: SplatHandle;
     config: SceneConfig;
@@ -133,7 +134,7 @@ export class SceneManager {
     if (!this.activeConfig) {
       return;
     }
-    const reveal = this.activeConfig.reveal;
+    const reveal = options.revealOverride ?? this.activeConfig.reveal;
     await Promise.all(
       this.activeHandles.map(async (handle) => {
         const item = this.activeItems.find((entry) => entry.id === handle.id);
@@ -158,6 +159,7 @@ export class SceneManager {
     if (!this.activeConfig) {
       return;
     }
+    const reveal = this.activeConfig.reveal;
     const activeHandles: SplatHandle[] = [];
     for (const handle of this.activeHandles) {
       const item = this.activeItems.find((entry) => entry.id === handle.id);
@@ -167,7 +169,7 @@ export class SceneManager {
       this.renderer.setVisible(handle.id, true);
       activeHandles.push(handle);
     }
-    await this.prepareRevealStart(activeHandles, this.activeConfig.reveal);
+    await this.prepareRevealStart(activeHandles, reveal);
   }
 
   getSplatItems(): SplatToggleItem[] {
@@ -269,7 +271,11 @@ export class SceneManager {
         ? new THREE.Vector3(0, minY + reveal.bottomSphere.originYOffset, 0)
         : new THREE.Vector3(
             (box.min.x + box.max.x) * 0.5,
-            box.min.y + reveal.bottomSphere.originYOffset,
+            reveal.bottomSphere.originAnchor === 'top'
+              ? box.max.y +
+                reveal.bottomSphere.originYOffset +
+                Math.max(0.001, box.max.y - box.min.y) * reveal.bottomSphere.originHeightScale
+              : box.min.y + reveal.bottomSphere.originYOffset,
             (box.min.z + box.max.z) * 0.5,
           );
       handle.setRevealBounds(handle.boundsY);

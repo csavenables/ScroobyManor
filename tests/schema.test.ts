@@ -39,10 +39,19 @@ describe('validateSceneConfig', () => {
       expect(result.data.reveal.durationMs).toBe(2800);
       expect(result.data.reveal.particleIntro.particleCount).toBe(9000);
       expect(result.data.reveal.bottomSphere.durationMs).toBe(1900);
+      expect(result.data.reveal.bottomSphere.originAnchor).toBe('bottom');
+      expect(result.data.reveal.bottomSphere.originHeightScale).toBe(0);
       expect(result.data.reveal.bottomClip.enabled).toBe(false);
       expect(result.data.reveal.bottomClip.offset).toBe(0);
       expect(result.data.presentation.mode).toBe('standard');
       expect(result.data.presentation.introSpinDegrees).toBe(0);
+      expect(result.data.cinematicReveal.enabled).toBe(false);
+      expect(result.data.cinematicReveal.originMode).toBe('modelCenter');
+      expect(result.data.cinematicReveal.staticPointCloud).toBe(false);
+      expect(result.data.cinematicReveal.particleLeadMs).toBe(2200);
+      expect(result.data.cinematicReveal.pointCloudFadeOutMs).toBe(1100);
+      expect(result.data.cinematicReveal.zoomOutFactor).toBe(1);
+      expect(result.data.cinematicReveal.zoomStartYOffset).toBe(0);
       expect(result.data.interiorView.enabled).toBe(false);
       expect(result.data.interiorView.radius).toBe(0.45);
       expect(result.data.annotations.enabled).toBe(false);
@@ -203,7 +212,9 @@ describe('validateSceneConfig', () => {
         bottomSphere: {
           durationMs: 1600,
           feather: 0.2,
+          originAnchor: 'top',
           originYOffset: -0.05,
+          originHeightScale: 0.6,
           maxRadiusScale: 1.1,
         },
         bottomClip: {
@@ -219,14 +230,63 @@ describe('validateSceneConfig', () => {
     };
 
     const result = validateSceneConfig(valid);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.data.reveal.mode).toBe('bottomSphere');
-      expect(result.data.presentation.mode).toBe('embedHero');
-      expect(result.data.reveal.particleIntro.blend).toBe('additive');
-      expect(result.data.reveal.bottomSphere.maxRadiusScale).toBe(1.1);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.reveal.mode).toBe('bottomSphere');
+        expect(result.data.presentation.mode).toBe('embedHero');
+        expect(result.data.reveal.particleIntro.blend).toBe('additive');
+        expect(result.data.reveal.bottomSphere.originAnchor).toBe('top');
+        expect(result.data.reveal.bottomSphere.originHeightScale).toBe(0.6);
+        expect(result.data.reveal.bottomSphere.maxRadiusScale).toBe(1.1);
       expect(result.data.reveal.bottomClip.enabled).toBe(true);
       expect(result.data.reveal.bottomClip.offset).toBe(0.03);
+    }
+  });
+
+  it('rejects invalid cinematic reveal timing relationships', () => {
+    const invalid = {
+      id: 'gatehouse',
+      title: 'Gatehouse',
+      assets: [
+        {
+          id: 'main',
+          src: '/x.splat',
+          transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+          visibleDefault: true,
+        },
+      ],
+      camera: {
+        home: { position: [0, 0, 2], target: [0, 0, 0], fov: 50 },
+        limits: { minDistance: 0.4, maxDistance: 4, minPolarAngle: 0.1, maxPolarAngle: 2.9 },
+        transitionMs: 500,
+      },
+      ui: {
+        enableFullscreen: true,
+        enableAutorotate: true,
+        enableReset: true,
+        enablePan: true,
+        autorotateDefaultOn: false,
+      },
+      transitions: { sceneFadeMs: 300 },
+      cinematicReveal: {
+        enabled: true,
+        originMode: 'topCenter',
+        particleLeadMs: 1000,
+        splatDelayMs: 1200,
+        sphereExpandMs: 0,
+        overlapMs: 200,
+        pointCloudFadeOutMs: 0,
+        zoomOutFactor: 0.8,
+        ease: 'easeInOut',
+      },
+    };
+
+    const result = validateSceneConfig(invalid);
+      expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.join(' ')).toContain('cinematicReveal.sphereExpandMs');
+      expect(result.errors.join(' ')).toContain('cinematicReveal.pointCloudFadeOutMs');
+      expect(result.errors.join(' ')).toContain('cinematicReveal.zoomOutFactor');
     }
   });
 

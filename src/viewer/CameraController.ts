@@ -4,6 +4,9 @@ import { CameraHomeConfig, CameraLimitsConfig } from '../config/schema';
 import { clamp } from '../utils/clamp';
 import { easeInOutCubic } from '../utils/easing';
 
+// Lower values frame tighter (camera moves closer to content after auto-fit).
+const FIT_DISTANCE_SCALE = 0.84;
+
 interface CameraAnimation {
   startTime: number;
   durationMs: number;
@@ -125,7 +128,7 @@ export class CameraController {
     const distanceForHeight = halfHeight / Math.tan(halfVerticalFov);
     const distanceForWidth = halfWidth / Math.tan(halfHorizontalFov);
     const distanceForSphere = radius / Math.sin(Math.min(halfVerticalFov, halfHorizontalFov));
-    const desiredDistance = Math.max(distanceForHeight, distanceForWidth, distanceForSphere) * 0.98;
+    const desiredDistance = Math.max(distanceForHeight, distanceForWidth, distanceForSphere) * FIT_DISTANCE_SCALE;
     const distance = clamp(desiredDistance, limits.minDistance, limits.maxDistance);
 
     this.controls.target.copy(target);
@@ -178,6 +181,10 @@ export class CameraController {
       toTarget: new THREE.Vector3(...options.target),
       toFov: options.fov,
     };
+  }
+
+  cancelAnimation(): void {
+    this.cameraAnimation = null;
   }
 
   private applyEffectiveControls(): void {

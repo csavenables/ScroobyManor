@@ -20,7 +20,7 @@ body,
   height: 100dvh;
   min-height: -webkit-fill-available;
   overflow: hidden;
-  background: #fff;
+  background: #000;
   color: var(--text);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
@@ -319,7 +319,7 @@ body,
   z-index: 2;
   pointer-events: none;
   opacity: 0;
-  background: #fff;
+  background: #000;
 }
 
 .replay-button {
@@ -391,11 +391,11 @@ body,
   display: grid;
   place-content: center;
   gap: 0.85rem;
-  background: rgb(255 255 255 / 72%);
+  background: rgb(0 0 0 / 72%);
 }
 
 .app-shell.app-shell-embed .loader {
-  background: rgb(255 255 255 / 42%);
+  background: rgb(0 0 0 / 45%);
 }
 
 .app-shell.app-shell-embed .loader-spinner {
@@ -416,7 +416,7 @@ body,
 
 .loader-message {
   margin: 0;
-  color: #3c465a;
+  color: #dbe7ff;
   font-size: 0.85rem;
 }
 

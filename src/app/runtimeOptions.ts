@@ -32,13 +32,13 @@ function parseOrigin(value: string | null): string | null {
   }
 }
 
-export function readRuntimeOptions(search: string, defaultSceneId = 'cake'): RuntimeOptions {
+export function readRuntimeOptions(search: string, defaultSceneId = 'hodsock-gatehouse'): RuntimeOptions {
   const params = new URLSearchParams(search);
   const sceneId = params.get('scene') ?? defaultSceneId;
   const embedDefault = sceneId === defaultSceneId;
   const embed = parseBooleanFlag(params.get('embed')) ?? embedDefault;
   const controlsVisible = parseBooleanFlag(params.get('controls')) ?? !embed;
-  const replayButtonVisible = parseBooleanFlag(params.get('replayButton')) ?? embed;
+  const replayButtonVisible = parseBooleanFlag(params.get('replayButton')) ?? false;
   return {
     sceneId,
     embed,

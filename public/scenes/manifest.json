@@ -1,6 +1,10 @@
 {
   "scenes": [
     {
+      "id": "hodsock-gatehouse",
+      "title": "Hodsock Gatehouse"
+    },
+    {
       "id": "cake",
       "title": "Harmony 2nd Birthday Cake"
     }

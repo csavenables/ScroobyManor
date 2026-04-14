@@ -1,0 +1,117 @@
+{
+  "id": "hodsock-gatehouse",
+  "title": "Hodsock Gatehouse",
+  "assets": [
+    {
+      "id": "gatehouse_main",
+      "src": "scenes/hodsock-gatehouse/splats/HodsockCombined30k.splat",
+      "transform": {
+        "position": [0, 0, 0],
+        "rotation": [180, -203, 0],
+        "scale": [1, 1, 1]
+      },
+      "visibleDefault": true
+    }
+  ],
+  "camera": {
+    "home": {
+      "position": [0, 1.08, 3.55],
+      "target": [0, 0.8, 0],
+      "fov": 54
+    },
+    "limits": {
+      "minDistance": 1.2,
+      "maxDistance": 14,
+      "minPolarAngle": 0.25,
+      "maxPolarAngle": 1.52
+    },
+    "transitionMs": 900
+  },
+  "ui": {
+    "enableFullscreen": true,
+    "enableAutorotate": true,
+    "enableReset": true,
+    "enablePan": false,
+    "autorotateDefaultOn": false
+  },
+  "transitions": {
+    "sceneFadeMs": 450,
+    "fadeColour": "#000000"
+  },
+  "presentation": {
+    "mode": "embedHero",
+    "introAutoRotateDelayMs": 0,
+    "idleRotateSpeed": 0.03,
+    "introSpinDegrees": 170
+  },
+  "cinematicReveal": {
+    "enabled": true,
+    "originMode": "topCenter",
+    "staticPointCloud": true,
+    "particleLeadMs": 4600,
+    "splatDelayMs": 3000,
+    "sphereExpandMs": 12000,
+    "overlapMs": 0,
+    "pointCloudFadeOutMs": 1200,
+    "zoomOutFactor": 1.04,
+    "zoomStartYOffset": 0.9,
+    "ease": "easeInOut"
+  },
+  "reveal": {
+    "enabled": true,
+    "mode": "bottomSphere",
+    "durationMs": 2200,
+    "band": 0.14,
+    "ease": "easeInOut",
+    "affectAlpha": true,
+    "affectSize": true,
+    "startPadding": -0.08,
+    "endPadding": 0.03,
+    "particleIntro": {
+      "durationMs": 4600,
+      "particleCount": 30000,
+      "spread": 0.7,
+      "size": 0.024,
+      "color": "#d8e8ff",
+      "blend": "additive"
+    },
+    "bottomSphere": {
+      "durationMs": 2200,
+      "feather": 0.28,
+      "originAnchor": "top",
+      "originYOffset": 0.04,
+      "originHeightScale": 0.25,
+      "maxRadiusScale": 3.8
+    },
+    "bottomClip": {
+      "enabled": true,
+      "offset": 0.02
+    }
+  },
+  "interiorView": {
+    "enabled": false,
+    "target": [0, 0, 0],
+    "radius": 1,
+    "softness": 0.2,
+    "fadeAlpha": 0.18,
+    "maxDistance": 20,
+    "affectSize": false
+  },
+  "annotations": {
+    "enabled": false,
+    "defaultSelectedId": null,
+    "pins": [],
+    "ui": {
+      "showTooltip": false,
+      "showNav": false,
+      "pinStyle": "numbered",
+      "occlusion": {
+        "enabled": true,
+        "mode": "depth",
+        "fadeAlpha": 0.2,
+        "disableClickWhenOccluded": true,
+        "epsilon": 0.01
+      }
+    }
+  }
+}

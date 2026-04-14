@@ -5,7 +5,7 @@ import {
   AnnotationUpdatePatch,
 } from '../annotations/AnnotationManager';
 import { AnnotationPersistence } from '../annotations/AnnotationPersistence';
-import { InteriorViewConfig, SceneConfig } from '../config/schema';
+import { InteriorViewConfig, RevealConfig, SceneConfig } from '../config/schema';
 import { GaussianSplatRenderer } from '../renderers/GaussianSplatRenderer';
 import { SplatHandle } from '../renderers/types';
 import { InputBindings } from './InputBindings';
@@ -67,11 +67,12 @@ export class Viewer {
   private currentIdleRotateSpeed = 0.35;
   private introInProgress: Promise<void> | null = null;
   private readonly onUserInteraction = (): void => {
+    this.cameraController.cancelAnimation();
     if (!this.autoRotate) {
       return;
     }
     this.cameraController.setAutoRotate(false, this.currentIdleRotateSpeed);
-    this.scheduleIdleResume(1800);
+    this.scheduleIdleResume(1200);
   };
 
   constructor(
@@ -130,7 +131,7 @@ export class Viewer {
       },
     });
 
-    this.scene.background = new THREE.Color('#ffffff');
+    this.scene.background = new THREE.Color('#000000');
     const ambient = new THREE.AmbientLight('#ffffff', 0.8);
     this.scene.add(ambient);
 
@@ -355,13 +356,41 @@ export class Viewer {
       return;
     }
     this.cameraController.setAutoRotate(false, this.currentIdleRotateSpeed);
+    const reveal = this.getIntroRevealConfig(this.activeConfig);
     await this.sceneManager.resetActiveRevealStart();
     const activeHandle = this.sceneManager.getActiveHandle();
-    const reveal = this.activeConfig.reveal;
     const revealDurationMs = this.getRevealDurationMs(reveal);
     let particleSource: THREE.Vector3[] = [];
     let particleColors: Float32Array | null = null;
     let particleDurationMs = 0;
+    let splatDelayMs = 0;
+    let overlapMs = Math.max(280, Math.floor(revealDurationMs * 0.45));
+    let originMode: 'topCenter' | 'modelCenter' | 'customOffset' = 'modelCenter';
+    let introEase: 'linear' | 'easeInOut' = reveal.ease;
+    let staticPointCloud = false;
+    let pointCloudFadeOutMs = Math.max(280, Math.floor(revealDurationMs * 0.45));
+    let zoomOutFactor = 1;
+    if (this.activeConfig.cinematicReveal.enabled) {
+      particleDurationMs = this.activeConfig.cinematicReveal.particleLeadMs;
+      splatDelayMs = this.activeConfig.cinematicReveal.splatDelayMs;
+      overlapMs = this.activeConfig.cinematicReveal.overlapMs;
+      originMode = this.activeConfig.cinematicReveal.originMode;
+      introEase = this.activeConfig.cinematicReveal.ease;
+      staticPointCloud = this.activeConfig.cinematicReveal.staticPointCloud;
+      pointCloudFadeOutMs = this.activeConfig.cinematicReveal.pointCloudFadeOutMs;
+      zoomOutFactor = this.activeConfig.cinematicReveal.zoomOutFactor;
+    }
+    if (
+      !this.reducedMotion &&
+      (zoomOutFactor > 1.001 || Math.abs(this.activeConfig.cinematicReveal.zoomStartYOffset) > 0.001)
+    ) {
+      this.startIntroZoom(
+        this.activeConfig,
+        this.getIntroSpinDurationMs(revealDurationMs, particleDurationMs, splatDelayMs),
+        zoomOutFactor,
+        this.activeConfig.cinematicReveal.zoomStartYOffset,
+      );
+    }
     if (
       activeHandle &&
       !this.reducedMotion &&
@@ -377,7 +406,9 @@ export class Viewer {
       particleSource = sampleCloud.points;
       particleColors = sampleCloud.colors ?? null;
       if (particleSource.length > 0) {
-        particleDurationMs = Math.max(120, reveal.particleIntro.durationMs);
+        if (!this.activeConfig.cinematicReveal.enabled) {
+          particleDurationMs = Math.max(120, reveal.particleIntro.durationMs);
+        }
       }
     }
 
@@ -391,31 +422,39 @@ export class Viewer {
         this.animateIntroSpin(
           activeHandle,
           activeOrientation.end,
-          activeOrientation.spinDegrees,
-          revealDurationMs + particleDurationMs,
-        ),
+              activeOrientation.spinDegrees,
+              this.getIntroSpinDurationMs(revealDurationMs, particleDurationMs, splatDelayMs),
+            ),
       );
       spinStartedIds.add(activeHandle.id);
     }
+    const particlePromise =
+      activeHandle && particleDurationMs > 0
+        ? this.particleIntroController.play(
+            particleSource,
+            activeHandle.boundsY,
+            {
+              ...reveal.particleIntro,
+              durationMs: Math.max(120, particleDurationMs),
+            },
+            this.reducedMotion,
+            {
+              anchor: activeHandle.object3D,
+              sourceColors: particleColors,
+              originMode,
+              ease: introEase,
+              lockToSource: staticPointCloud,
+            },
+          )
+        : Promise.resolve();
 
-    if (activeHandle && particleDurationMs > 0) {
-      await this.particleIntroController.play(
-        particleSource,
-        activeHandle.boundsY,
-        {
-          ...reveal.particleIntro,
-          durationMs: particleDurationMs,
-        },
-        this.reducedMotion,
-        {
-          anchor: activeHandle.object3D,
-          sourceColors: particleColors,
-        },
-      );
+    if (splatDelayMs > 0) {
+      await this.sleep(splatDelayMs);
     }
 
-    await this.sceneManager.revealActiveScene({
+    const revealPromise = this.sceneManager.revealActiveScene({
       reducedMotion: this.reducedMotion,
+      revealOverride: reveal,
       beforeRevealIn: ({ handle, reveal: revealConfig }) => {
         const spinDuration = this.getRevealDurationMs(revealConfig);
         if (!spinStartedIds.has(handle.id)) {
@@ -427,25 +466,27 @@ export class Viewer {
                 handle,
                 orientation.end,
                 orientation.spinDegrees,
-                spinDuration,
+                this.getIntroSpinDurationMs(spinDuration, particleDurationMs, splatDelayMs),
               ),
             );
             spinStartedIds.add(handle.id);
           }
         }
-        if (import.meta.env.DEV) {
-          console.debug('[intro-spin]', {
-            handleId: handle.id,
-            spinDuration,
-            revealMode: revealConfig.mode,
-            preStarted: spinStartedIds.has(handle.id),
-          });
+        if (!staticPointCloud) {
+          void this.particleIntroController.cover(
+            this.reducedMotion ? Math.max(220, Math.floor(overlapMs * 0.75)) : Math.max(220, overlapMs),
+          );
         }
-        void this.particleIntroController.cover(
-          this.reducedMotion ? Math.max(280, Math.floor(spinDuration * 0.4)) : spinDuration,
-        );
       },
     });
+    await Promise.allSettled([particlePromise, revealPromise]);
+    if (staticPointCloud && particleDurationMs > 0) {
+      await this.particleIntroController.cover(
+        this.reducedMotion
+          ? Math.max(220, Math.floor(pointCloudFadeOutMs * 0.75))
+          : Math.max(220, pointCloudFadeOutMs),
+      );
+    }
     if (spinPromises.length > 0) {
       await Promise.allSettled(spinPromises);
     }
@@ -461,6 +502,67 @@ export class Viewer {
       return;
     }
     this.cameraController.setAutoRotate(false, this.currentIdleRotateSpeed);
+  }
+
+  private getIntroRevealConfig(config: SceneConfig): RevealConfig {
+    if (!config.cinematicReveal.enabled) {
+      return config.reveal;
+    }
+    const sphereDuration = Math.max(100, config.cinematicReveal.sphereExpandMs);
+    return {
+      ...config.reveal,
+      bottomSphere: {
+        ...config.reveal.bottomSphere,
+        durationMs: sphereDuration,
+      },
+      ease: config.cinematicReveal.ease,
+    };
+  }
+
+  private sleep(durationMs: number): Promise<void> {
+    return new Promise((resolve) => {
+      window.setTimeout(resolve, Math.max(0, durationMs));
+    });
+  }
+
+  private getIntroSpinDurationMs(
+    revealDurationMs: number,
+    particleLeadMs: number,
+    splatDelayMs: number,
+  ): number {
+    const timelineDuration =
+      particleLeadMs > 0 ? Math.max(particleLeadMs, splatDelayMs + revealDurationMs) : revealDurationMs;
+    return Math.max(300, timelineDuration);
+  }
+
+  private startIntroZoom(
+    config: SceneConfig,
+    durationMs: number,
+    zoomOutFactor: number,
+    zoomStartYOffset: number,
+  ): void {
+    const home = this.fittedHome ?? config.camera.home;
+    const target = new THREE.Vector3(...home.target);
+    const end = new THREE.Vector3(...home.position);
+    const direction = end.clone().sub(target);
+    const distance = direction.length();
+    if (distance <= 0.0001) {
+      return;
+    }
+    direction.normalize();
+    const start = target.clone().add(direction.multiplyScalar(distance * zoomOutFactor));
+    start.y += zoomStartYOffset;
+    this.cameraController.setHomeImmediately({
+      position: [start.x, start.y, start.z],
+      target: home.target,
+      fov: home.fov,
+    });
+    this.cameraController.animateTo({
+      position: home.position,
+      target: home.target,
+      fov: home.fov,
+      durationMs,
+    });
   }
 
   private async animateIntroSpin(

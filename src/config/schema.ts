@@ -55,7 +55,9 @@ export interface ParticleIntroConfig {
 export interface BottomSphereRevealConfig {
   durationMs: number;
   feather: number;
+  originAnchor: 'bottom' | 'top';
   originYOffset: number;
+  originHeightScale: number;
   maxRadiusScale: number;
 }
 
@@ -139,6 +141,20 @@ export interface PresentationConfig {
   introSpinDegrees: number;
 }
 
+export interface CinematicRevealConfig {
+  enabled: boolean;
+  originMode: 'topCenter' | 'modelCenter' | 'customOffset';
+  staticPointCloud: boolean;
+  particleLeadMs: number;
+  splatDelayMs: number;
+  sphereExpandMs: number;
+  overlapMs: number;
+  pointCloudFadeOutMs: number;
+  zoomOutFactor: number;
+  zoomStartYOffset: number;
+  ease: RevealEase;
+}
+
 export interface SceneConfig {
   id: string;
   title: string;
@@ -152,6 +168,7 @@ export interface SceneConfig {
   transitions: TransitionConfig;
   reveal: RevealConfig;
   presentation: PresentationConfig;
+  cinematicReveal: CinematicRevealConfig;
   interiorView: InteriorViewConfig;
   annotations: AnnotationsConfig;
 }
@@ -296,6 +313,10 @@ export function validateSceneConfig(raw: unknown): { ok: true; data: SceneConfig
   if (presentationValue !== undefined && !isObject(presentationValue)) {
     errors.push('"presentation" must be an object when provided.');
   }
+  const cinematicRevealValue = raw.cinematicReveal;
+  if (cinematicRevealValue !== undefined && !isObject(cinematicRevealValue)) {
+    errors.push('"cinematicReveal" must be an object when provided.');
+  }
   const interiorValue = raw.interiorView;
   if (interiorValue !== undefined && !isObject(interiorValue)) {
     errors.push('"interiorView" must be an object when provided.');
@@ -307,6 +328,7 @@ export function validateSceneConfig(raw: unknown): { ok: true; data: SceneConfig
   const transitionsObject = isObject(transitionsValue) ? transitionsValue : {};
   const revealObject = isObject(revealValue) ? revealValue : {};
   const presentationObject = isObject(presentationValue) ? presentationValue : {};
+  const cinematicRevealObject = isObject(cinematicRevealValue) ? cinematicRevealValue : {};
   const particleIntroValue = revealObject.particleIntro;
   if (particleIntroValue !== undefined && !isObject(particleIntroValue)) {
     errors.push('"reveal.particleIntro" must be an object when provided.');
@@ -473,7 +495,14 @@ export function validateSceneConfig(raw: unknown): { ok: true; data: SceneConfig
       bottomSphere: {
         durationMs: isNumber(bottomSphereObject.durationMs) ? bottomSphereObject.durationMs : 1900,
         feather: isNumber(bottomSphereObject.feather) ? bottomSphereObject.feather : 0.18,
+        originAnchor:
+          bottomSphereObject.originAnchor === 'top' || bottomSphereObject.originAnchor === 'bottom'
+            ? bottomSphereObject.originAnchor
+            : 'bottom',
         originYOffset: isNumber(bottomSphereObject.originYOffset) ? bottomSphereObject.originYOffset : 0,
+        originHeightScale: isNumber(bottomSphereObject.originHeightScale)
+          ? bottomSphereObject.originHeightScale
+          : 0,
         maxRadiusScale: isNumber(bottomSphereObject.maxRadiusScale) ? bottomSphereObject.maxRadiusScale : 1.08,
       },
       bottomClip: {
@@ -492,6 +521,45 @@ export function validateSceneConfig(raw: unknown): { ok: true; data: SceneConfig
       introSpinDegrees: isNumber(presentationObject.introSpinDegrees)
         ? presentationObject.introSpinDegrees
         : 0,
+    },
+    cinematicReveal: {
+      enabled:
+        typeof cinematicRevealObject.enabled === 'boolean' ? cinematicRevealObject.enabled : false,
+      originMode:
+        cinematicRevealObject.originMode === 'topCenter' ||
+        cinematicRevealObject.originMode === 'modelCenter' ||
+        cinematicRevealObject.originMode === 'customOffset'
+          ? cinematicRevealObject.originMode
+          : 'modelCenter',
+      staticPointCloud:
+        typeof cinematicRevealObject.staticPointCloud === 'boolean'
+          ? cinematicRevealObject.staticPointCloud
+          : false,
+      particleLeadMs: isNumber(cinematicRevealObject.particleLeadMs)
+        ? cinematicRevealObject.particleLeadMs
+        : 2200,
+      splatDelayMs: isNumber(cinematicRevealObject.splatDelayMs)
+        ? cinematicRevealObject.splatDelayMs
+        : 900,
+      sphereExpandMs: isNumber(cinematicRevealObject.sphereExpandMs)
+        ? cinematicRevealObject.sphereExpandMs
+        : 1800,
+      overlapMs: isNumber(cinematicRevealObject.overlapMs)
+        ? cinematicRevealObject.overlapMs
+        : 900,
+      pointCloudFadeOutMs: isNumber(cinematicRevealObject.pointCloudFadeOutMs)
+        ? cinematicRevealObject.pointCloudFadeOutMs
+        : 1100,
+      zoomOutFactor: isNumber(cinematicRevealObject.zoomOutFactor)
+        ? cinematicRevealObject.zoomOutFactor
+        : 1,
+      zoomStartYOffset: isNumber(cinematicRevealObject.zoomStartYOffset)
+        ? cinematicRevealObject.zoomStartYOffset
+        : 0,
+      ease:
+        cinematicRevealObject.ease === 'linear' || cinematicRevealObject.ease === 'easeInOut'
+          ? cinematicRevealObject.ease
+          : 'easeInOut',
     },
     interiorView: {
       enabled: typeof interiorObject.enabled === 'boolean' ? interiorObject.enabled : false,
@@ -562,6 +630,9 @@ export function validateSceneConfig(raw: unknown): { ok: true; data: SceneConfig
   if (config.reveal.bottomSphere.maxRadiusScale <= 0) {
     errors.push('"reveal.bottomSphere.maxRadiusScale" must be > 0.');
   }
+  if (config.reveal.bottomSphere.originHeightScale < 0) {
+    errors.push('"reveal.bottomSphere.originHeightScale" must be >= 0.');
+  }
 
   if (config.presentation.introAutoRotateDelayMs < 0) {
     errors.push('"presentation.introAutoRotateDelayMs" must be >= 0.');
@@ -569,7 +640,24 @@ export function validateSceneConfig(raw: unknown): { ok: true; data: SceneConfig
   if (config.presentation.idleRotateSpeed <= 0) {
     errors.push('"presentation.idleRotateSpeed" must be > 0.');
   }
-
+  if (config.cinematicReveal.particleLeadMs <= 0) {
+    errors.push('"cinematicReveal.particleLeadMs" must be > 0.');
+  }
+  if (config.cinematicReveal.splatDelayMs < 0) {
+    errors.push('"cinematicReveal.splatDelayMs" must be >= 0.');
+  }
+  if (config.cinematicReveal.sphereExpandMs <= 0) {
+    errors.push('"cinematicReveal.sphereExpandMs" must be > 0.');
+  }
+  if (config.cinematicReveal.overlapMs < 0) {
+    errors.push('"cinematicReveal.overlapMs" must be >= 0.');
+  }
+  if (config.cinematicReveal.pointCloudFadeOutMs <= 0) {
+    errors.push('"cinematicReveal.pointCloudFadeOutMs" must be > 0.');
+  }
+  if (config.cinematicReveal.zoomOutFactor < 1) {
+    errors.push('"cinematicReveal.zoomOutFactor" must be >= 1.');
+  }
   if (config.interiorView.radius <= 0) {
     errors.push('"interiorView.radius" must be > 0.');
   }

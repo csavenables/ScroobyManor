@@ -124,9 +124,14 @@ export class SplatRevealController {
     const duration = Math.max(100, config.bottomSphere.durationMs * durationScale);
     const origin = this.computeBottomSphereOrigin(handle, config);
     const maxRadius = this.computeBottomSphereMaxRadius(handle, config);
+    const coverageRadius = this.computeBottomSphereCoverageRadius(handle, config, origin);
     const minRadius = Math.max(0.0001, config.bottomSphere.feather * 0.02);
+    const revealRadius = Math.min(
+      maxRadius,
+      Math.max(minRadius * 1.2, coverageRadius + Math.max(0.0001, config.bottomSphere.feather) * 1.15),
+    );
     const initialProgress = reverse ? 1 : 0;
-    const initialRadius = minRadius + (maxRadius - minRadius) * initialProgress;
+    const initialRadius = minRadius + (revealRadius - minRadius) * initialProgress;
     this.applyRevealScale(handle, initialProgress, config.affectSize);
     handle.setRevealParams({
       enabled: true,
@@ -148,7 +153,7 @@ export class SplatRevealController {
         const eased = applyEase(t, config.ease);
         const progress = reverse ? 1 - eased : eased;
         this.applyRevealScale(handle, progress, config.affectSize);
-        const radius = minRadius + (maxRadius - minRadius) * progress;
+        const radius = minRadius + (revealRadius - minRadius) * progress;
         handle.setRevealParams({
           enabled: true,
           mode: 'bottomSphere',
@@ -180,7 +185,7 @@ export class SplatRevealController {
         revealY: handle.boundsY.maxY,
         band: config.band,
         sphereOrigin: origin,
-        sphereRadius: maxRadius * 2.25,
+        sphereRadius: maxRadius * 1.2,
         sphereFeather: config.bottomSphere.feather,
         clipBottomEnabled: config.bottomClip.enabled,
         clipBottomY: handle.boundsY.minY + config.bottomClip.offset,
@@ -193,7 +198,7 @@ export class SplatRevealController {
         revealY: handle.boundsY.maxY,
         band: config.band,
         sphereOrigin: origin,
-        sphereRadius: maxRadius * 2.25,
+        sphereRadius: maxRadius * 1.2,
         sphereFeather: config.bottomSphere.feather,
         clipBottomEnabled: config.bottomClip.enabled,
         clipBottomY: handle.boundsY.minY + config.bottomClip.offset,
@@ -210,9 +215,14 @@ export class SplatRevealController {
     if (box.isEmpty()) {
       return new THREE.Vector3(0, config.bottomSphere.originYOffset, 0);
     }
+    const sizeY = Math.max(0.001, box.max.y - box.min.y);
+    const y =
+      config.bottomSphere.originAnchor === 'top'
+        ? box.max.y + config.bottomSphere.originYOffset + sizeY * config.bottomSphere.originHeightScale
+        : box.min.y + config.bottomSphere.originYOffset;
     return new THREE.Vector3(
       (box.min.x + box.max.x) * 0.5,
-      box.min.y + config.bottomSphere.originYOffset,
+      y,
       (box.min.z + box.max.z) * 0.5,
     );
   }
@@ -245,6 +255,35 @@ export class SplatRevealController {
     const requiredScale = Math.max(2.2, config.bottomSphere.maxRadiusScale);
     const overscan = diagonal * 0.45;
     return Math.max(0.01, maxDistance * requiredScale + overscan);
+  }
+
+  private computeBottomSphereCoverageRadius(
+    handle: SplatHandle,
+    config: RevealConfig,
+    origin: THREE.Vector3,
+  ): number {
+    const box = handle.sampledBounds
+      ? new THREE.Box3(handle.sampledBounds.min.clone(), handle.sampledBounds.max.clone())
+      : new THREE.Box3().setFromObject(handle.object3D);
+    if (box.isEmpty()) {
+      return 1;
+    }
+
+    let maxDistance = 0;
+    const corners = [
+      new THREE.Vector3(box.min.x, box.min.y, box.min.z),
+      new THREE.Vector3(box.min.x, box.min.y, box.max.z),
+      new THREE.Vector3(box.min.x, box.max.y, box.min.z),
+      new THREE.Vector3(box.min.x, box.max.y, box.max.z),
+      new THREE.Vector3(box.max.x, box.min.y, box.min.z),
+      new THREE.Vector3(box.max.x, box.min.y, box.max.z),
+      new THREE.Vector3(box.max.x, box.max.y, box.min.z),
+      new THREE.Vector3(box.max.x, box.max.y, box.max.z),
+    ];
+    for (const corner of corners) {
+      maxDistance = Math.max(maxDistance, origin.distanceTo(corner));
+    }
+    return Math.max(0.01, maxDistance * Math.max(1, config.bottomSphere.maxRadiusScale));
   }
 
   private applyRevealScale(handle: SplatHandle, progress: number, enabled: boolean): void {

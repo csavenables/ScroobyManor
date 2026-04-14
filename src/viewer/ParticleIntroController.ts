@@ -3,6 +3,9 @@ import { ParticleIntroConfig } from '../config/schema';
 import { SplatRevealBounds } from '../renderers/types';
 import { easeInOutCubic } from '../utils/easing';
 
+type IntroEase = 'linear' | 'easeInOut';
+type IntroOriginMode = 'topCenter' | 'modelCenter' | 'customOffset';
+
 function hexToColor(value: string): THREE.Color {
   const color = new THREE.Color();
   try {
@@ -30,6 +33,9 @@ export class ParticleIntroController {
     options: {
       anchor?: THREE.Object3D | null;
       sourceColors?: Float32Array | null;
+      originMode?: IntroOriginMode;
+      ease?: IntroEase;
+      lockToSource?: boolean;
     } = {},
   ): Promise<void> {
     this.disposeCurrent();
@@ -42,30 +48,65 @@ export class ParticleIntroController {
       return;
     }
 
+    let sourceOrder: number[] | null = null;
+    if (options.lockToSource) {
+      sourceOrder = Array.from({ length: sourcePoints.length }, (_, index) => index);
+      const worldY = new Float32Array(sourcePoints.length);
+      const anchor = options.anchor ?? null;
+      if (anchor) {
+        anchor.updateWorldMatrix(true, false);
+        const e = anchor.matrixWorld.elements;
+        for (let i = 0; i < sourcePoints.length; i += 1) {
+          const p = sourcePoints[i];
+          worldY[i] = e[1] * p.x + e[5] * p.y + e[9] * p.z + e[13];
+        }
+      } else {
+        for (let i = 0; i < sourcePoints.length; i += 1) {
+          worldY[i] = sourcePoints[i].y;
+        }
+      }
+      sourceOrder.sort((a, b) => worldY[b] - worldY[a]);
+    }
     const from = new Float32Array(count * 3);
     const to = new Float32Array(count * 3);
     const current = new Float32Array(count * 3);
     const boundsHeight = Math.max(0.001, bounds.maxY - bounds.minY);
     const spreadRadius = Math.max(0.01, boundsHeight * config.spread);
+    const sourceBounds = new THREE.Box3().setFromPoints(sourcePoints);
+    const center = sourceBounds.getCenter(new THREE.Vector3());
+    const topCenter = new THREE.Vector3(center.x, sourceBounds.max.y + spreadRadius * 0.2, center.z);
     const color = hexToColor(config.color);
     const sourceColors = options.sourceColors ?? null;
-    const hasPerPointColors = Boolean(sourceColors && sourceColors.length >= count * 3);
+    const hasPerPointColors = Boolean(sourceColors && sourceColors.length >= sourcePoints.length * 3);
+    const originMode: IntroOriginMode = options.originMode ?? 'modelCenter';
+    const ease: IntroEase = options.ease ?? 'easeInOut';
+    const lockToSource = options.lockToSource ?? false;
 
     for (let i = 0; i < count; i += 1) {
-      const source = sourcePoints[i];
+      const srcIndex = sourceOrder ? sourceOrder[i] : i;
+      const source = sourcePoints[srcIndex];
       const azimuth = Math.random() * Math.PI * 2;
-      const elevation = Math.acos(2 * Math.random() - 1);
-      const radial = spreadRadius * (0.4 + Math.random() * 0.6);
-      const outward = new THREE.Vector3(
-        Math.sin(elevation) * Math.cos(azimuth),
-        Math.cos(elevation),
-        Math.sin(elevation) * Math.sin(azimuth),
-      ).multiplyScalar(radial);
+      const radial = spreadRadius * (0.15 + Math.random() * 0.5);
+      const jitter = new THREE.Vector3(
+        Math.cos(azimuth) * radial,
+        -Math.random() * spreadRadius * 0.2,
+        Math.sin(azimuth) * radial,
+      );
+      let spawn = source.clone();
+      if (!lockToSource) {
+        if (originMode === 'topCenter') {
+          spawn = topCenter.clone().add(jitter);
+        } else if (originMode === 'modelCenter') {
+          spawn = center.clone().add(jitter);
+        } else {
+          spawn = source.clone().add(jitter);
+        }
+      }
 
       const base = i * 3;
-      from[base] = source.x + outward.x;
-      from[base + 1] = source.y + outward.y;
-      from[base + 2] = source.z + outward.z;
+      from[base] = spawn.x;
+      from[base + 1] = spawn.y;
+      from[base + 2] = spawn.z;
       to[base] = source.x;
       to[base + 1] = source.y;
       to[base + 2] = source.z;
@@ -78,7 +119,18 @@ export class ParticleIntroController {
     this.geometry.setAttribute('position', new THREE.BufferAttribute(current, 3));
     if (hasPerPointColors && sourceColors) {
       const pointColors = new Float32Array(count * 3);
-      pointColors.set(sourceColors.subarray(0, count * 3));
+      if (sourceOrder) {
+        for (let i = 0; i < count; i += 1) {
+          const srcIndex = sourceOrder[i];
+          const srcBase = srcIndex * 3;
+          const dstBase = i * 3;
+          pointColors[dstBase] = sourceColors[srcBase];
+          pointColors[dstBase + 1] = sourceColors[srcBase + 1];
+          pointColors[dstBase + 2] = sourceColors[srcBase + 2];
+        }
+      } else {
+        pointColors.set(sourceColors.subarray(0, count * 3));
+      }
       this.geometry.setAttribute('color', new THREE.BufferAttribute(pointColors, 3));
     }
     this.material = new THREE.PointsMaterial({
@@ -86,9 +138,9 @@ export class ParticleIntroController {
       vertexColors: hasPerPointColors,
       size: Math.max(0.001, config.size),
       transparent: true,
-      opacity: 0.95,
+      opacity: 0,
       depthWrite: false,
-      depthTest: true,
+      depthTest: false,
       blending: config.blend === 'additive' ? THREE.AdditiveBlending : THREE.NormalBlending,
       sizeAttenuation: true,
     });
@@ -100,25 +152,34 @@ export class ParticleIntroController {
     } else {
       this.scene.add(this.points);
     }
+    if (options.lockToSource) {
+      this.geometry.setDrawRange(0, 0);
+    }
 
     const start = performance.now();
     const duration = Math.max(120, config.durationMs);
+    const targetOpacity = 0.98;
     await new Promise<void>((resolve) => {
       const step = (now: number): void => {
         const t = Math.min(1, (now - start) / duration);
-        const eased = easeInOutCubic(t);
-        const outAttr = this.geometry?.getAttribute('position');
-        if (outAttr instanceof THREE.BufferAttribute) {
-          for (let i = 0; i < count; i += 1) {
-            const base = i * 3;
-            outAttr.array[base] = from[base] + (to[base] - from[base]) * eased;
-            outAttr.array[base + 1] = from[base + 1] + (to[base + 1] - from[base + 1]) * eased;
-            outAttr.array[base + 2] = from[base + 2] + (to[base + 2] - from[base + 2]) * eased;
+        const eased = ease === 'linear' ? t : easeInOutCubic(t);
+        if (!options.lockToSource) {
+          const outAttr = this.geometry?.getAttribute('position');
+          if (outAttr instanceof THREE.BufferAttribute) {
+            for (let i = 0; i < count; i += 1) {
+              const base = i * 3;
+              outAttr.array[base] = from[base] + (to[base] - from[base]) * eased;
+              outAttr.array[base + 1] = from[base + 1] + (to[base + 1] - from[base + 1]) * eased;
+              outAttr.array[base + 2] = from[base + 2] + (to[base + 2] - from[base + 2]) * eased;
+            }
+            outAttr.needsUpdate = true;
           }
-          outAttr.needsUpdate = true;
+        } else if (this.geometry) {
+          const visibleCount = Math.max(1, Math.min(count, Math.floor(count * eased)));
+          this.geometry.setDrawRange(0, visibleCount);
         }
         if (this.material) {
-          this.material.opacity = 0.92;
+          this.material.opacity = targetOpacity * eased;
         }
 
         if (t >= 1) {
@@ -129,6 +190,9 @@ export class ParticleIntroController {
       };
       this.rafId = requestAnimationFrame(step);
     });
+    if (this.geometry && options.lockToSource) {
+      this.geometry.setDrawRange(0, count);
+    }
   }
 
   async cover(durationMs: number): Promise<void> {

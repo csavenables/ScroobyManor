@@ -187,11 +187,9 @@ export function createAppShell(
   return {
     toolbar,
     setLoading(loading: boolean, message?: string): void {
-      if (loading) {
-        loader.show(message);
-      } else {
-        loader.hide();
-      }
+      void loading;
+      void message;
+      loader.hide();
     },
     setError(title: string, details: string[]): void {
       errorTitle.textContent = title;
