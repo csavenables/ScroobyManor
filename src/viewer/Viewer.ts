@@ -310,11 +310,6 @@ export class Viewer {
   }
 
   private fitCameraToContent(config: SceneConfig): void {
-    if (config.id === 'hodsock-gatehouse') {
-      this.cameraController.setHomeImmediately(config.camera.home);
-      this.fittedHome = config.camera.home;
-      return;
-    }
     const fit = this.splatRenderer.getFitData();
     if (!fit) {
       this.cameraController.setHomeImmediately(config.camera.home);
