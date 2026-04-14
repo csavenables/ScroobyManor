@@ -5,6 +5,8 @@ import { AnnotationOverlay } from './AnnotationOverlay';
 import { AnnotationOverlayModel, OcclusionSamplePoint, ProjectedAnnotationPin } from './AnnotationTypes';
 import { OcclusionResolver } from './OcclusionResolver';
 
+const ANNOTATION_CAMERA_TRANSITION_MULTIPLIER = 3;
+
 interface AnnotationManagerOptions {
   host: HTMLElement;
   camera: THREE.PerspectiveCamera;
@@ -162,7 +164,7 @@ export class AnnotationManager {
       position: pin.camera.position,
       target: pin.camera.target,
       fov: pin.camera.fov,
-      durationMs: pin.camera.transitionMs,
+      durationMs: pin.camera.transitionMs * ANNOTATION_CAMERA_TRANSITION_MULTIPLIER,
     });
     this.emitEditorState();
   }
