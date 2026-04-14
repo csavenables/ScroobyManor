@@ -15,7 +15,7 @@ const PRESETS = {
     compressionLevel: 2,
     alphaRemovalThreshold: 8,
     optimizeSplatData: true,
-    sectionSize: 0,
+    sectionSize: 12000,
     blockSize: 5,
     bucketSize: 256,
     sphericalHarmonicsDegree: 0,
@@ -24,7 +24,7 @@ const PRESETS = {
     compressionLevel: 1,
     alphaRemovalThreshold: 4,
     optimizeSplatData: true,
-    sectionSize: 0,
+    sectionSize: 12000,
     blockSize: 5,
     bucketSize: 256,
     sphericalHarmonicsDegree: 0,
@@ -33,7 +33,7 @@ const PRESETS = {
     compressionLevel: 0,
     alphaRemovalThreshold: 1,
     optimizeSplatData: true,
-    sectionSize: 0,
+    sectionSize: 16000,
     blockSize: 5,
     bucketSize: 256,
     sphericalHarmonicsDegree: 1,
@@ -78,15 +78,32 @@ async function toKSplat(inputPath, outputPath, presetName, libs) {
   const inputExt = getExt(inputPath);
   const inputArrayBuffer = toArrayBuffer(inputBuffer);
   const sceneCenter = new THREE.Vector3(0, 0, 0);
+  const chunkOrder = parseArg('chunk-order', 'default');
+  const sectionSizeArg = Number.parseInt(parseArg('section-size', `${preset.sectionSize}`), 10);
+  const sectionSize = Number.isFinite(sectionSizeArg) ? Math.max(0, sectionSizeArg) : preset.sectionSize;
 
   let splatBuffer;
-  if (inputExt === '.splat') {
+  if (inputExt === '.splat' && chunkOrder === 'topDown') {
+    const splatArray = GaussianSplats3D.SplatParser.parseStandardSplatToUncompressedSplatArray(
+      inputArrayBuffer,
+    );
+    splatArray.splats.sort((a, b) => b[1] - a[1]);
+    const generator = GaussianSplats3D.SplatBufferGenerator.getStandardGenerator(
+      preset.alphaRemovalThreshold,
+      preset.compressionLevel,
+      sectionSize,
+      sceneCenter,
+      preset.blockSize,
+      preset.bucketSize,
+    );
+    splatBuffer = generator.generateFromUncompressedSplatArray(splatArray);
+  } else if (inputExt === '.splat') {
     splatBuffer = await GaussianSplats3D.SplatLoader.loadFromFileData(
       inputArrayBuffer,
       preset.alphaRemovalThreshold,
       preset.compressionLevel,
       preset.optimizeSplatData,
-      preset.sectionSize,
+      sectionSize,
       sceneCenter,
       preset.blockSize,
       preset.bucketSize,
@@ -98,7 +115,7 @@ async function toKSplat(inputPath, outputPath, presetName, libs) {
       preset.compressionLevel,
       preset.optimizeSplatData,
       preset.sphericalHarmonicsDegree,
-      preset.sectionSize,
+      sectionSize,
       sceneCenter,
       preset.blockSize,
       preset.bucketSize,
@@ -173,7 +190,7 @@ async function run() {
   const [inputStat, outputStat] = await Promise.all([fs.stat(absoluteInput), fs.stat(absoluteOutput)]);
   const reduction = (1 - outputStat.size / inputStat.size) * 100;
   console.info(
-    `[convert] format=ksplat preset=${presetName} input=${formatBytes(inputStat.size)} output=${formatBytes(outputStat.size)} reduction=${reduction.toFixed(1)}% elapsed_ms=${elapsedMs.toFixed(1)}`,
+    `[convert] format=ksplat preset=${presetName} chunk_order=${parseArg('chunk-order', 'default')} section_size=${sectionSize} input=${formatBytes(inputStat.size)} output=${formatBytes(outputStat.size)} reduction=${reduction.toFixed(1)}% elapsed_ms=${elapsedMs.toFixed(1)}`,
   );
 }
 

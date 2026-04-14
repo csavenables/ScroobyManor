@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "convert:ksplat": "node scripts/convert-splat.mjs --preset balanced --format ksplat",
+    "convert:ksplat:topdown": "node scripts/convert-splat.mjs --preset balanced --format ksplat --chunk-order topDown --section-size 12000",
     "convert:ksplat:speed": "node scripts/convert-splat.mjs --preset speed --format ksplat",
     "convert:ksplat:quality": "node scripts/convert-splat.mjs --preset quality --format ksplat",
     "convert:spz": "node scripts/convert-splat.mjs --preset balanced --format spz",

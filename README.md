@@ -92,6 +92,7 @@ Conversion presets:
 - `npm run convert:ksplat:speed`
 - `npm run convert:ksplat` (balanced default)
 - `npm run convert:ksplat:quality`
+- `npm run convert:ksplat:topdown` (reorders `.splat` source by Y so progressive chunks favor upper geometry first)
 
 Startup benchmark (captures `[perf]` logs from headless Chromium):
 
