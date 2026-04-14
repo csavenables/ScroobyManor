@@ -67,7 +67,7 @@ function formatBytes(bytes) {
   return `${mb.toFixed(2)} MB`;
 }
 
-async function toKSplat(inputPath, outputPath, presetName, libs) {
+async function toKSplat(inputPath, outputPath, presetName, libs, options) {
   const { THREE, GaussianSplats3D } = libs;
   const preset = PRESETS[presetName];
   if (!preset) {
@@ -78,9 +78,8 @@ async function toKSplat(inputPath, outputPath, presetName, libs) {
   const inputExt = getExt(inputPath);
   const inputArrayBuffer = toArrayBuffer(inputBuffer);
   const sceneCenter = new THREE.Vector3(0, 0, 0);
-  const chunkOrder = parseArg('chunk-order', 'default');
-  const sectionSizeArg = Number.parseInt(parseArg('section-size', `${preset.sectionSize}`), 10);
-  const sectionSize = Number.isFinite(sectionSizeArg) ? Math.max(0, sectionSizeArg) : preset.sectionSize;
+  const chunkOrder = options.chunkOrder;
+  const sectionSize = options.sectionSize;
 
   let splatBuffer;
   if (inputExt === '.splat' && chunkOrder === 'topDown') {
@@ -135,6 +134,13 @@ async function run() {
   assertFormat(format);
 
   const presetName = parseArg('preset', 'balanced');
+  const preset = PRESETS[presetName];
+  if (!preset) {
+    throw new Error(`Unknown preset "${presetName}". Use speed, balanced, or quality.`);
+  }
+  const chunkOrder = parseArg('chunk-order', 'default');
+  const sectionSizeArg = Number.parseInt(parseArg('section-size', `${preset.sectionSize}`), 10);
+  const sectionSize = Number.isFinite(sectionSizeArg) ? Math.max(0, sectionSizeArg) : preset.sectionSize;
   let inputPath = parseArg('input', null);
   const outputPath = parseArg('output', format === 'spz' ? DEFAULT_SPZ_OUTPUT : DEFAULT_OUTPUT);
   if (!inputPath) {
@@ -183,14 +189,17 @@ async function run() {
     }
     await fs.copyFile(absoluteInput, absoluteOutput);
   } else {
-    await toKSplat(absoluteInput, absoluteOutput, presetName, { THREE, GaussianSplats3D });
+    await toKSplat(absoluteInput, absoluteOutput, presetName, { THREE, GaussianSplats3D }, {
+      chunkOrder,
+      sectionSize,
+    });
   }
   const elapsedMs = performance.now() - start;
 
   const [inputStat, outputStat] = await Promise.all([fs.stat(absoluteInput), fs.stat(absoluteOutput)]);
   const reduction = (1 - outputStat.size / inputStat.size) * 100;
   console.info(
-    `[convert] format=ksplat preset=${presetName} chunk_order=${parseArg('chunk-order', 'default')} section_size=${sectionSize} input=${formatBytes(inputStat.size)} output=${formatBytes(outputStat.size)} reduction=${reduction.toFixed(1)}% elapsed_ms=${elapsedMs.toFixed(1)}`,
+    `[convert] format=ksplat preset=${presetName} chunk_order=${chunkOrder} section_size=${sectionSize} input=${formatBytes(inputStat.size)} output=${formatBytes(outputStat.size)} reduction=${reduction.toFixed(1)}% elapsed_ms=${elapsedMs.toFixed(1)}`,
   );
 }
 

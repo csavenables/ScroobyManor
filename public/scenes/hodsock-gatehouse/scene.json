@@ -15,8 +15,8 @@
   ],
   "camera": {
     "home": {
-      "position": [0, 1.08, 3.55],
-      "target": [0, 0.8, 0],
+      "position": [-0.62, 1.83, 3.56],
+      "target": [-0.62, 1.55, 0.01],
       "fov": 54
     },
     "limits": {
@@ -45,16 +45,16 @@
     "introSpinDegrees": 170
   },
   "cinematicReveal": {
-    "enabled": false,
+    "enabled": true,
     "originMode": "topCenter",
     "staticPointCloud": false,
     "particleLeadMs": 1,
     "splatDelayMs": 0,
-    "sphereExpandMs": 2200,
+    "sphereExpandMs": 6000,
     "overlapMs": 0,
     "pointCloudFadeOutMs": 1200,
-    "zoomOutFactor": 1,
-    "zoomStartYOffset": 0,
+    "zoomOutFactor": 1.04,
+    "zoomStartYOffset": 0.9,
     "ease": "easeInOut"
   },
   "performanceProfile": {
@@ -83,7 +83,7 @@
       "blend": "additive"
     },
     "bottomSphere": {
-      "durationMs": 2200,
+      "durationMs": 6000,
       "feather": 0.28,
       "originAnchor": "top",
       "originYOffset": 0.04,
