@@ -54,6 +54,7 @@ interface RevealSceneObject extends THREE.Object3D {
 interface ResolvedAssetSource {
   path: string;
   format?: number;
+  extension: string | null;
 }
 
 function toQuaternionArray(rotationDegrees: [number, number, number]): [number, number, number, number] {
@@ -387,10 +388,12 @@ export class GaussianSplatRenderer implements SplatRenderer {
     if (assets.length === 1) {
       const asset = assets[0];
       const source = await this.resolveAssetSource(asset);
+      const progressiveLoad = source.extension === '.ksplat';
       try {
         await this.viewer.addSplatScene(source.path, {
           format: source.format,
           showLoadingUI: false,
+          progressiveLoad,
           position: asset.transform.position,
           rotation: toQuaternionArray(asset.transform.rotation),
           scale: asset.transform.scale,
@@ -443,13 +446,14 @@ export class GaussianSplatRenderer implements SplatRenderer {
     const format = this.resolveSceneFormat(extension);
 
     if (extension !== '.splat') {
-      return { path: asset.src, format };
+      return { path: asset.src, format, extension };
     }
 
     const blobUrl = await this.getSplatBlobUrl(asset.src);
     return {
       path: blobUrl,
       format,
+      extension,
     };
   }
 

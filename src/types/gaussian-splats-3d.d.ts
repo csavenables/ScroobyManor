@@ -44,6 +44,7 @@ declare module '@mkkellogg/gaussian-splats-3d' {
   export interface AddSplatSceneOptions {
     format?: number;
     showLoadingUI?: boolean;
+    progressiveLoad?: boolean;
     position?: [number, number, number];
     rotation?: [number, number, number, number];
     scale?: [number, number, number];
