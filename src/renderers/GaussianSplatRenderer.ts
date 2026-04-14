@@ -19,6 +19,7 @@ import {
 } from './types';
 
 const RUNTIME_SUPPORTED_EXTENSIONS = ['.sog', 'lod-meta.json'] as const;
+const EPSILON = 0.00001;
 
 const DEFAULT_SOG_RUNTIME: SogRuntimeConfig = {
   unified: true,
@@ -47,6 +48,52 @@ const DEFAULT_REVEAL_PARAMS = {
   clipBottomY: 0,
   affectAlpha: true,
 };
+
+const REVEAL_WORKBUFFER_MODIFIER_GLSL = `
+uniform float uRevealEnabled;
+uniform float uRevealMode;
+uniform float uRevealY;
+uniform float uRevealBand;
+uniform vec3 uSphereOrigin;
+uniform float uSphereRadius;
+uniform float uSphereFeather;
+uniform float uClipBottomEnabled;
+uniform float uClipBottomY;
+uniform float uRevealAffectAlpha;
+uniform vec3 uScaleMul;
+
+float computeRevealAlpha(vec3 center) {
+  if (uRevealEnabled < 0.5) {
+    return 1.0;
+  }
+  if (uRevealMode < 0.5) {
+    float band = max(0.0001, uRevealBand);
+    return smoothstep(uRevealY - band, uRevealY + band, center.y);
+  }
+  float distToOrigin = distance(center, uSphereOrigin);
+  float feather = max(0.0001, uSphereFeather);
+  float edge = smoothstep(uSphereRadius - feather, uSphereRadius + feather, distToOrigin);
+  return 1.0 - edge;
+}
+
+void modifySplatCenter(inout vec3 center) {
+}
+
+void modifySplatRotationScale(vec3 originalCenter, vec3 modifiedCenter, inout vec4 rotation, inout vec3 scale) {
+  scale *= max(uScaleMul, vec3(0.0001));
+}
+
+void modifySplatColor(vec3 center, inout vec4 color) {
+  if (uClipBottomEnabled > 0.5 && center.y < uClipBottomY) {
+    color.a = 0.0;
+    return;
+  }
+  float revealAlpha = computeRevealAlpha(center);
+  if (uRevealAffectAlpha > 0.5) {
+    color.a *= revealAlpha;
+  }
+}
+`;
 
 interface InternalSplatHandle extends SplatHandle {
   entity: pc.Entity;
@@ -458,6 +505,8 @@ export class GaussianSplatRenderer implements SplatRenderer {
     }
 
     this.applyRuntimeConfigToComponent(component);
+    component.setWorkBufferModifier({ glsl: REVEAL_WORKBUFFER_MODIFIER_GLSL });
+    component.workBufferUpdate = pc.WORKBUFFER_UPDATE_ONCE;
 
     this.sceneRoot.addChild(entity);
 
@@ -524,6 +573,31 @@ export class GaussianSplatRenderer implements SplatRenderer {
   }
 
   private applyRevealParams(handle: InternalSplatHandle): void {
+    const params = handle.revealParams;
+    const scaleMulX = handle.object3D.scale.x / Math.max(EPSILON, handle.baseScale.x);
+    const scaleMulY = handle.object3D.scale.y / Math.max(EPSILON, handle.baseScale.y);
+    const scaleMulZ = handle.object3D.scale.z / Math.max(EPSILON, handle.baseScale.z);
+
+    handle.component.setParameter('uRevealEnabled', params.enabled ? 1 : 0);
+    handle.component.setParameter('uRevealMode', params.mode === 'bottomSphere' ? 1 : 0);
+    handle.component.setParameter('uRevealY', params.revealY);
+    handle.component.setParameter('uRevealBand', Math.max(EPSILON, params.band));
+    handle.component.setParameter('uSphereOrigin', [
+      params.sphereOrigin.x,
+      params.sphereOrigin.y,
+      params.sphereOrigin.z,
+    ]);
+    handle.component.setParameter('uSphereRadius', Math.max(EPSILON, params.sphereRadius));
+    handle.component.setParameter('uSphereFeather', Math.max(EPSILON, params.sphereFeather));
+    handle.component.setParameter('uClipBottomEnabled', params.clipBottomEnabled ? 1 : 0);
+    handle.component.setParameter('uClipBottomY', params.clipBottomY);
+    handle.component.setParameter('uRevealAffectAlpha', params.affectAlpha ? 1 : 0);
+    handle.component.setParameter('uScaleMul', [scaleMulX, scaleMulY, scaleMulZ]);
+
+    handle.component.workBufferUpdate = params.enabled
+      ? pc.WORKBUFFER_UPDATE_ALWAYS
+      : pc.WORKBUFFER_UPDATE_ONCE;
+
     if (handle.object3D.visible) {
       handle.component.show();
     } else {
@@ -680,6 +754,13 @@ export class GaussianSplatRenderer implements SplatRenderer {
   private destroyHandle(handle: InternalSplatHandle): void {
     if (this.handleById.get(handle.id) !== handle) {
       return;
+    }
+
+    try {
+      handle.component.setWorkBufferModifier(null);
+      handle.component.workBufferUpdate = pc.WORKBUFFER_UPDATE_ONCE;
+    } catch {
+      // no-op
     }
 
     if (handle.entity.parent) {

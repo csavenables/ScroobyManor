@@ -15,7 +15,7 @@
   ],
   "camera": {
     "home": {
-      "position": [-1.15, 1.27, 3.29],
+      "position": [-1.27, 1.31, 3.62],
       "target": [0.06, 0.86, 0.03],
       "fov": 52
     },
@@ -65,7 +65,7 @@
     "maxDevicePixelRatio": 2.5
   },
   "sogRuntime": {
-    "unified": false,
+    "unified": true,
     "highQualitySH": true,
     "splatBudget": 0,
     "lodBaseDistance": 4.8,
