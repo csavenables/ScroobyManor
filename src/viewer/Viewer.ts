@@ -218,7 +218,6 @@ export class Viewer {
       }
       this.ui.setLoading(false);
       await this.ui.waitForEntryLoadReadyBeforeReveal();
-      this.ui.notifyRevealStarting();
       await this.playIntro();
       this.annotationManager.configure(mergedConfig);
     } catch (error) {
@@ -450,11 +449,22 @@ export class Viewer {
       );
     }
 
+    let revealSignalSent = false;
     const revealPromise = this.sceneManager.revealActiveScene({
       reducedMotion: this.reducedMotion,
       revealOverride: reveal,
+      beforeRevealIn: async () => {
+        if (revealSignalSent) {
+          return;
+        }
+        revealSignalSent = true;
+        this.ui.notifyRevealStarting();
+      },
     });
     await Promise.allSettled([revealPromise]);
+    if (!revealSignalSent) {
+      this.ui.notifyRevealStarting();
+    }
     const introCompleteMs = Math.max(0, performance.now() - this.introStartedAtMs);
     console.info(`[perf] intro_complete_ms=${introCompleteMs.toFixed(1)}`);
     const shouldAutoRotate = this.shouldEnableAutoRotateAfterIntro(this.activeConfig);

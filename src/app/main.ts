@@ -2,8 +2,6 @@ import { createAppShell } from './bootstrap';
 import { readRuntimeOptions } from './runtimeOptions';
 import { Viewer } from '../viewer/Viewer';
 
-const ENABLE_LOCAL_ANNOTATION_AUTHORING = true;
-
 export function startApp(): void {
   const appRoot = document.querySelector<HTMLElement>('#app');
   if (!appRoot) {
@@ -22,9 +20,7 @@ export function startApp(): void {
     embedMode: runtime.embed,
     controlsVisible: runtime.controlsVisible,
     replayButtonVisible: runtime.replayButtonVisible,
-    annotationAuthoring:
-      runtime.annotate ||
-      (runtime.sceneId === 'hodsock-gatehouse' && ENABLE_LOCAL_ANNOTATION_AUTHORING),
+    annotationAuthoring: false,
     onReplay: () => {
       void viewer.playIntro();
     },
