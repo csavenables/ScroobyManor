@@ -20,7 +20,7 @@ export interface AppShellOptions {
 
 const THEME_STORAGE_KEY = 'hodsock.viewer.theme';
 const FORCE_LOGO_ALT = 'Hodsock Priory';
-const FORCE_LOGO_SOURCES = ['branding/main-logo.svg', './branding/main-logo.svg', 'main-logo.svg'] as const;
+const FORCE_LOGO_SOURCES = ['./main-logo.svg', 'main-logo.svg', 'branding/main-logo.svg', './branding/main-logo.svg'] as const;
 type ThemeMode = 'light' | 'dark';
 
 function readStoredTheme(): ThemeMode {
@@ -211,13 +211,20 @@ export function createAppShell(
     applyLogoSource(currentLogoCandidates[0], alt);
   };
   brandingLogoImage.onerror = () => {
+    const failedSource = currentLogoCandidates[currentLogoCandidateIndex] ?? brandingLogoImage.src;
+    console.warn(`[branding] logo source failed: ${failedSource}`);
     if (currentLogoCandidateIndex >= currentLogoCandidates.length - 1) {
       return;
     }
     currentLogoCandidateIndex += 1;
     applyLogoSource(currentLogoCandidates[currentLogoCandidateIndex], brandingLogoImage.alt || FORCE_LOGO_ALT);
   };
+  brandingLogoImage.onload = () => {
+    brandingLogo.classList.remove('hidden');
+  };
   // Force an immediate logo on boot, then allow scene branding config to override if present.
+  brandingLogo.classList.remove('hidden');
+  brandingLogo.dataset.position = 'top-left';
   setLogoWithFallbacks(FORCE_LOGO_SOURCES, FORCE_LOGO_ALT);
   let themeMode: ThemeMode = readStoredTheme();
   const applyTheme = (nextTheme: ThemeMode): void => {

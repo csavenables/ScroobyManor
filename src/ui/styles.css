@@ -50,6 +50,9 @@
   --control-bg-hover: #051a24;
   --control-active-bg: rgb(0 43 57 / 10%);
   --control-active-text: #051a24;
+  --fab-active-bg: #002b39;
+  --fab-active-text: #f6fbff;
+  --fab-active-border: #002b39;
   --floating-bg: rgb(255 255 255 / 92%);
   --floating-text: #051a24;
   --pin-bg: #002b39;
@@ -77,6 +80,9 @@
   --control-bg-hover: #051a24;
   --control-active-bg: rgb(0 43 57 / 10%);
   --control-active-text: #051a24;
+  --fab-active-bg: #002b39;
+  --fab-active-text: #f6fbff;
+  --fab-active-border: #002b39;
   --floating-bg: rgb(255 255 255 / 92%);
   --floating-text: #051a24;
   --pin-bg: #002b39;
@@ -99,6 +105,9 @@
   --control-bg-hover: #fff;
   --control-active-bg: rgb(0 43 57 / 10%);
   --control-active-text: #051a24;
+  --fab-active-bg: #ffffff;
+  --fab-active-text: #051a24;
+  --fab-active-border: rgb(255 255 255 / 90%);
   --floating-bg: rgb(255 255 255 / 92%);
   --floating-text: #051a24;
   --pin-bg: rgb(255 255 255 / 96%);
@@ -186,10 +195,17 @@ body,
 
 .brand-logo {
   position: absolute;
-  top: max(1rem, env(safe-area-inset-top));
-  left: max(1rem, env(safe-area-inset-left));
-  z-index: 30;
+  top: max(0.75rem, env(safe-area-inset-top));
+  left: max(0.45rem, env(safe-area-inset-left));
+  z-index: 9999;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
   pointer-events: none;
+}
+
+.brand-logo.hidden {
+  display: block !important;
 }
 
 .brand-logo[data-position='top-right'] {
@@ -199,8 +215,10 @@ body,
 
 .brand-logo img {
   display: block;
-  max-width: min(210px, 46vw);
-  max-height: 84px;
+  width: min(289px, 44.2vw);
+  max-width: 289px;
+  max-height: none;
+  height: auto;
   object-fit: contain;
 }
 
@@ -657,8 +675,10 @@ body,
 .annotation-fab.active,
 .fullscreen-fab.active,
 .theme-fab.active {
-  border-color: rgb(0 43 57 / 62%);
-  background: var(--control-active-bg);
+  border-color: var(--fab-active-border);
+  background: var(--fab-active-bg);
+  color: var(--fab-active-text);
+  box-shadow: 0 0 0 1px rgb(0 43 57 / 18%);
 }
 
 .replay-button {
@@ -839,6 +859,11 @@ body,
 
   .toolbar-button {
     width: 100%;
+  }
+
+  .brand-logo img {
+    width: min(187px, 49.3vw);
+    max-width: 187px;
   }
 }
 
