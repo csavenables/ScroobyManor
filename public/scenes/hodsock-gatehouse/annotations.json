@@ -7,23 +7,23 @@
         "id": "pin_1",
         "order": 1,
         "pos": [
-          2,
-          0.9033,
-          0.2264
+          1.2999999999999994,
+          2.103300000000001,
+          0.6664
         ],
-        "title": "Annotation 1",
-        "body": "Edit this description.",
+        "title": "Embattled turret",
+        "body": "The turret is crowned with battlement-style parapets, giving the gatehouse its fortified Tudor character.",
         "assetId": "gatehouse_main",
         "camera": {
           "position": [
-            2.7440778411997337,
-            1.6570247475840576,
-            3.89213087910352
+            1.70948156225984,
+            3.1139573459268144,
+            1.9568601227094815
           ],
           "target": [
-            1.9999999999999993,
-            0.9032999999999999,
-            0.22639999999999993
+            1.2999999999999994,
+            2.103300000000001,
+            0.6664
           ],
           "fov": 52,
           "transitionMs": 700,
@@ -40,23 +40,23 @@
         "id": "pin_2",
         "order": 2,
         "pos": [
-          0.21693057305475547,
-          0.9064234140299424,
-          0.14496809066219463
+          -0.3830694269452446,
+          1.4564234140299424,
+          -0.1550319093378054
         ],
-        "title": "Annotation 2",
-        "body": "Edit this description.",
+        "title": "Lombard frieze",
+        "body": "This decorative brick band below the parapet is called a Lombard frieze, adding texture and rhythm to the facade.",
         "assetId": "gatehouse_main",
         "camera": {
           "position": [
-            -0.7133293986158998,
-            0.9532940111680746,
-            1.6941415256540995
+            -0.21408462083587662,
+            1.622358635951073,
+            1.0213796848236658
           ],
           "target": [
-            0.06000000000000005,
-            0.86,
-            0.029999999999999995
+            -0.3830151478493318,
+            1.4564108155556792,
+            -0.15502322147543887
           ],
           "fov": 52,
           "transitionMs": 700,
@@ -74,22 +74,121 @@
         "order": 3,
         "pos": [
           -0.005748977403832747,
-          0.8701548969867158,
-          0.2186105777456277
+          0.5701548969867155,
+          -0.031389422254372315
         ],
-        "title": "Annotation 3",
-        "body": "Edit this description.",
+        "title": "Gate arch",
+        "body": "The large central arch was the principal entrance through the gatehouse, controlling arrival across the bridge and former moat.",
         "assetId": "gatehouse_main",
         "camera": {
           "position": [
-            -2.72042014757718,
-            1.871327820990515,
-            2.362839029085098
+            -0.4480349435122417,
+            0.8873348121844231,
+            1.300551094468453
           ],
           "target": [
-            0.06000000000000005,
-            0.86,
-            0.029999999999999995
+            -0.006479093240413014,
+            0.5718717842040696,
+            -0.03162868832649665
+          ],
+          "fov": 52,
+          "transitionMs": 700,
+          "lockControls": true,
+          "orbitLimits": {
+            "minDistance": 1.2,
+            "maxDistance": 14,
+            "minPolarAngle": 0.25,
+            "maxPolarAngle": 1.52
+          }
+        }
+      },
+      {
+        "id": "pin_4",
+        "order": 4,
+        "pos": [
+          -1.2695206107876815,
+          2.4236671577320346,
+          -0.5163940224235626
+        ],
+        "title": "Crenellated parapet",
+        "body": "The indented top edge is a crenellated parapet, a castle-derived detail used here as both status symbol and defensive styling.",
+        "assetId": "gatehouse_main",
+        "camera": {
+          "position": [
+            -2.4885028030803387,
+            3.1470389908147105,
+            0.34862032592591363
+          ],
+          "target": [
+            -1.2656654308032471,
+            2.4180149251172613,
+            -0.51491437382358
+          ],
+          "fov": 52,
+          "transitionMs": 700,
+          "lockControls": true,
+          "orbitLimits": {
+            "minDistance": 1.2,
+            "maxDistance": 14,
+            "minPolarAngle": 0.25,
+            "maxPolarAngle": 1.52
+          }
+        }
+      },
+      {
+        "id": "pin_5",
+        "order": 5,
+        "pos": [
+          -0.6331319870481429,
+          1.31140427092159,
+          -1.8817051260790234
+        ],
+        "title": "Quoins",
+        "body": "The larger cut-stone blocks at the corners are quoins, used to reinforce edges and give the gatehouse a more formal finish.",
+        "assetId": "gatehouse_main",
+        "camera": {
+          "position": [
+            -1.539241534349987,
+            2.3698354967118425,
+            -3.276869131467964
+          ],
+          "target": [
+            -0.7404937221005092,
+            1.3760108421724897,
+            -1.8628106293894293
+          ],
+          "fov": 52,
+          "transitionMs": 700,
+          "lockControls": true,
+          "orbitLimits": {
+            "minDistance": 1.2,
+            "maxDistance": 14,
+            "minPolarAngle": 0.25,
+            "maxPolarAngle": 1.52
+          }
+        }
+      },
+      {
+        "id": "pin_6",
+        "order": 6,
+        "pos": [
+          0.33425772103530577,
+          1.3232554590591312,
+          -1.285205735182519
+        ],
+        "title": "Ashlar stone dressings",
+        "body": "The pale cut-stone edging around the windows is ashlar dressing, used to strengthen and visually refine openings in the brickwork.",
+        "assetId": "gatehouse_main",
+        "camera": {
+          "position": [
+            1.734916818766527,
+            1.9207053552139715,
+            -2.5839425621985783
+          ],
+          "target": [
+            0.3129817769819909,
+            1.3249702917164998,
+            -1.2966400900675994
           ],
           "fov": 52,
           "transitionMs": 700,

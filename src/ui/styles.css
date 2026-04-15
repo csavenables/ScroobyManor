@@ -305,6 +305,37 @@ body,
   background: var(--control-bg-hover);
 }
 
+.entry-load-ring {
+  --entry-load-progress: 0deg;
+  justify-self: center;
+  width: 34px;
+  height: 34px;
+  margin-top: 0.32rem;
+  border-radius: 50%;
+  background:
+    conic-gradient(
+      var(--accent) 0deg,
+      var(--accent) var(--entry-load-progress),
+      rgb(255 255 255 / 18%) var(--entry-load-progress),
+      rgb(255 255 255 / 18%) 360deg
+    );
+  -webkit-mask: radial-gradient(circle, transparent calc(50% - 2.5px), #000 calc(50% - 2px));
+  mask: radial-gradient(circle, transparent calc(50% - 2.5px), #000 calc(50% - 2px));
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 170ms ease, transform 170ms ease;
+  pointer-events: none;
+}
+
+.entry-load-ring.is-visible {
+  opacity: 0.96;
+  transform: scale(1);
+}
+
+.entry-load-ring-inner {
+  display: none;
+}
+
 .drag-instruction {
   position: absolute;
   left: 50%;
@@ -976,6 +1007,16 @@ body,
     width: min(187px, 49.3vw);
     max-width: 187px;
     transform: translateX(-26px);
+  }
+
+  .entry-load-ring {
+    width: 30px;
+    height: 30px;
+    margin-top: 0.26rem;
+  }
+
+  .entry-load-ring-inner {
+    border-width: 4px;
   }
 
   .fullscreen-fab {

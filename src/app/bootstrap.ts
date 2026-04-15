@@ -22,6 +22,8 @@ const THEME_STORAGE_KEY = 'hodsock.viewer.theme';
 const DRAG_HINT_DELAY_MS = 1000;
 const END_LIGHTBOX_DELAY_MS = 20000;
 const END_LIGHTBOX_DISMISS_MS = 260;
+const ENTRY_LOAD_RING_HIDE_MS = 170;
+const ENTRY_LOAD_REVEAL_LEAD_MS = 120;
 const HODSOCK_WEBSITE_URL = 'https://www.hodsockpriory.com';
 const CHRISTIAN_LINKTREE_URL = 'https://linktr.ee/Csavenables';
 const FORCE_LOGO_ALT = 'Hodsock Priory';
@@ -77,6 +79,9 @@ export function createAppShell(
             </h2>
             <p class="entry-subline">An interactive preview designed to give couples a true sense of the space</p>
             <button type="button" class="entry-button" data-enter-experience>Enter Experience</button>
+            <div class="entry-load-ring hidden" data-entry-load-ring aria-hidden="true">
+              <span class="entry-load-ring-inner"></span>
+            </div>
           </div>
         </div>
         <div class="drag-instruction hidden" data-drag-instruction>Drag to explore</div>
@@ -194,6 +199,7 @@ export function createAppShell(
   const annotationHost = container.querySelector<HTMLElement>('#annotation-host');
   const entryOverlay = container.querySelector<HTMLElement>('[data-entry-overlay]');
   const enterExperienceButton = container.querySelector<HTMLButtonElement>('[data-enter-experience]');
+  const entryLoadRing = container.querySelector<HTMLElement>('[data-entry-load-ring]');
   const dragInstruction = container.querySelector<HTMLElement>('[data-drag-instruction]');
   const endLightbox = container.querySelector<HTMLElement>('[data-end-lightbox]');
   const endLightboxClose = container.querySelector<HTMLButtonElement>('[data-end-lightbox-close]');
@@ -218,6 +224,7 @@ export function createAppShell(
     !annotationHost ||
     !entryOverlay ||
     !enterExperienceButton ||
+    !entryLoadRing ||
     !dragInstruction ||
     !endLightbox ||
     !endLightboxClose ||
@@ -317,6 +324,127 @@ export function createAppShell(
   window.addEventListener('resize', syncFullscreenVisibility);
   let annotationPanelOpen = false;
   let latestAnnotationState: AnnotationEditorState | null = null;
+  let entryLoadProgress = 0;
+  let entryLoadTarget = 0;
+  let entryLoadRaf = 0;
+  let entryLoadHideTimer = 0;
+  let entryLoadReadyTimer = 0;
+  let entryLoadCompleted = false;
+  let entryLoadDismissed = false;
+  let entryLoadReadyPromise = Promise.resolve();
+  let resolveEntryLoadReady: (() => void) | null = null;
+  let entryLoadReadySettled = true;
+  const clearEntryLoadReadyTimer = (): void => {
+    if (!entryLoadReadyTimer) {
+      return;
+    }
+    window.clearTimeout(entryLoadReadyTimer);
+    entryLoadReadyTimer = 0;
+  };
+  const startEntryLoadBarrier = (): void => {
+    clearEntryLoadReadyTimer();
+    entryLoadReadySettled = false;
+    entryLoadReadyPromise = new Promise<void>((resolve) => {
+      resolveEntryLoadReady = resolve;
+    });
+  };
+  const resolveEntryLoadBarrier = (delayMs = 0): void => {
+    if (entryLoadReadySettled) {
+      return;
+    }
+    clearEntryLoadReadyTimer();
+    if (delayMs > 0) {
+      entryLoadReadyTimer = window.setTimeout(() => {
+        if (entryLoadReadySettled) {
+          return;
+        }
+        entryLoadReadySettled = true;
+        const resolver = resolveEntryLoadReady;
+        resolveEntryLoadReady = null;
+        resolver?.();
+      }, delayMs);
+      return;
+    }
+    entryLoadReadySettled = true;
+    const resolver = resolveEntryLoadReady;
+    resolveEntryLoadReady = null;
+    resolver?.();
+  };
+  const setEntryLoadProgress = (value: number): void => {
+    entryLoadProgress = Math.max(0, Math.min(1, value));
+    entryLoadRing.style.setProperty('--entry-load-progress', `${(entryLoadProgress * 360).toFixed(2)}deg`);
+  };
+  const stopEntryLoadAnimation = (): void => {
+    if (!entryLoadRaf) {
+      return;
+    }
+    window.cancelAnimationFrame(entryLoadRaf);
+    entryLoadRaf = 0;
+  };
+  const clearEntryLoadHideTimer = (): void => {
+    if (!entryLoadHideTimer) {
+      return;
+    }
+    window.clearTimeout(entryLoadHideTimer);
+    entryLoadHideTimer = 0;
+  };
+  const hideEntryLoadRing = (): void => {
+    stopEntryLoadAnimation();
+    clearEntryLoadHideTimer();
+    if (entryLoadRing.classList.contains('hidden')) {
+      return;
+    }
+    entryLoadRing.classList.remove('is-visible');
+    entryLoadHideTimer = window.setTimeout(() => {
+      entryLoadRing.classList.add('hidden');
+    }, ENTRY_LOAD_RING_HIDE_MS);
+  };
+  const showEntryLoadRing = (): void => {
+    if (entryLoadCompleted || entryLoadDismissed || !appShell.classList.contains('entry-active')) {
+      return;
+    }
+    clearEntryLoadHideTimer();
+    entryLoadRing.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      entryLoadRing.classList.add('is-visible');
+    });
+  };
+  const getStageTarget = (message: string | undefined): number => {
+    const normalized = (message ?? '').toLowerCase();
+    if (normalized.includes('scene configuration')) {
+      return 0.18;
+    }
+    if (normalized.includes('dissolving')) {
+      return 0.42;
+    }
+    if (normalized.includes('splat assets')) {
+      return 0.9;
+    }
+    return 0.12;
+  };
+  const runEntryLoadAnimation = (): void => {
+    entryLoadRaf = 0;
+    const delta = entryLoadTarget - entryLoadProgress;
+    if (Math.abs(delta) < 0.0005) {
+      setEntryLoadProgress(entryLoadTarget);
+      if (entryLoadCompleted && entryLoadProgress >= 1) {
+        resolveEntryLoadBarrier(ENTRY_LOAD_REVEAL_LEAD_MS);
+      }
+      return;
+    }
+    const maxStep = entryLoadCompleted ? 0.08 : 0.022;
+    const minStep = entryLoadCompleted ? 0.02 : 0.003;
+    const easedStep = Math.max(minStep, Math.min(maxStep, Math.abs(delta) * 0.14));
+    const next = entryLoadProgress + Math.sign(delta) * Math.min(Math.abs(delta), easedStep);
+    setEntryLoadProgress(next);
+    entryLoadRaf = window.requestAnimationFrame(runEntryLoadAnimation);
+  };
+  const animateEntryLoadTo = (target: number): void => {
+    entryLoadTarget = Math.max(entryLoadTarget, Math.min(1, target));
+    if (!entryLoadRaf) {
+      entryLoadRaf = window.requestAnimationFrame(runEntryLoadAnimation);
+    }
+  };
   const syncAnnotationFab = (): void => {
     annotationFab.classList.toggle('active', annotationPanelOpen);
     annotationFab.textContent = annotationPanelOpen ? '\u2212' : '+';
@@ -425,6 +553,9 @@ export function createAppShell(
     if (!appShell.classList.contains('entry-active')) {
       return;
     }
+    entryLoadDismissed = true;
+    resolveEntryLoadBarrier();
+    hideEntryLoadRing();
     hasEnteredExperience = true;
     hasInteractionSinceEnter = false;
     clearDragInstructionTimer();
@@ -495,11 +626,43 @@ export function createAppShell(
       return themeMode;
     },
     setLoading(loading: boolean, message?: string): void {
-      void loading;
-      void message;
       loader.hide();
+      if (!appShell.classList.contains('entry-active')) {
+        resolveEntryLoadBarrier();
+        hideEntryLoadRing();
+        return;
+      }
+      if (loading) {
+        if (entryLoadReadySettled) {
+          startEntryLoadBarrier();
+        }
+        if (entryLoadCompleted) {
+          entryLoadCompleted = false;
+          entryLoadDismissed = false;
+          entryLoadTarget = 0;
+          setEntryLoadProgress(0);
+        }
+        showEntryLoadRing();
+        animateEntryLoadTo(getStageTarget(message));
+        return;
+      }
+      entryLoadCompleted = true;
+      if (entryLoadDismissed) {
+        resolveEntryLoadBarrier();
+        hideEntryLoadRing();
+        return;
+      }
+      if (entryLoadReadySettled) {
+        startEntryLoadBarrier();
+      }
+      showEntryLoadRing();
+      animateEntryLoadTo(1);
     },
     setError(title: string, details: string[]): void {
+      entryLoadDismissed = true;
+      entryLoadCompleted = false;
+      resolveEntryLoadBarrier();
+      hideEntryLoadRing();
       errorTitle.textContent = title;
       errorDetails.innerHTML = '';
       for (const detail of details) {
@@ -668,6 +831,14 @@ export function createAppShell(
       annTitle.disabled = readonly;
       annBody.disabled = readonly;
       annAssetSelect.disabled = readonly;
+    },
+    waitForEntryLoadReadyBeforeReveal(): Promise<void> {
+      return entryLoadReadyPromise;
+    },
+    notifyRevealStarting(): void {
+      entryLoadDismissed = true;
+      resolveEntryLoadBarrier();
+      hideEntryLoadRing();
     },
     setBrandingLogo(logo: BrandingLogoConfig | null): void {
       setBrandingLogo(logo);

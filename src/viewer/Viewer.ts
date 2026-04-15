@@ -34,6 +34,8 @@ export interface ViewerUi {
     onSave(): void;
   }): void;
   setAnnotationEditorState(state: AnnotationEditorState): void;
+  waitForEntryLoadReadyBeforeReveal(): Promise<void>;
+  notifyRevealStarting(): void;
   getOverlayElement(): HTMLElement;
   getCanvasHostElement(): HTMLElement;
   getAnnotationHostElement(): HTMLElement;
@@ -210,11 +212,13 @@ export class Viewer {
       this.activeSceneId = sceneId;
       const interior = this.sceneManager.getInteriorViewConfig();
       if (interior) {
-        this.ui.configureInteriorDebug(interior, (patch) => {
+      this.ui.configureInteriorDebug(interior, (patch) => {
           this.sceneManager.updateInteriorViewConfig(patch);
         });
       }
       this.ui.setLoading(false);
+      await this.ui.waitForEntryLoadReadyBeforeReveal();
+      this.ui.notifyRevealStarting();
       await this.playIntro();
       this.annotationManager.configure(mergedConfig);
     } catch (error) {
