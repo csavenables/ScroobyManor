@@ -216,6 +216,12 @@ export interface MobileOverridesConfig {
   cooldownTicks?: number;
 }
 
+export interface AnalyticsConfig {
+  enabled: boolean;
+  endpoint: string;
+  project: string;
+}
+
 export interface SceneConfig {
   id: string;
   title: string;
@@ -233,6 +239,7 @@ export interface SceneConfig {
   performanceProfile: PerformanceProfileConfig;
   sogRuntime: SogRuntimeConfig;
   mobileOverrides: MobileOverridesConfig;
+  analytics: AnalyticsConfig;
   interiorView: InteriorViewConfig;
   annotations: AnnotationsConfig;
   branding: BrandingConfig;
@@ -416,6 +423,10 @@ export function validateSceneConfig(raw: unknown): { ok: true; data: SceneConfig
   if (mobileOverridesValue !== undefined && !isObject(mobileOverridesValue)) {
     errors.push('"mobileOverrides" must be an object when provided.');
   }
+  const analyticsValue = raw.analytics;
+  if (analyticsValue !== undefined && !isObject(analyticsValue)) {
+    errors.push('"analytics" must be an object when provided.');
+  }
   const annotationsValue = raw.annotations;
   if (annotationsValue !== undefined && !isObject(annotationsValue)) {
     errors.push('"annotations" must be an object when provided.');
@@ -431,6 +442,13 @@ export function validateSceneConfig(raw: unknown): { ok: true; data: SceneConfig
   const performanceProfileObject = isObject(performanceProfileValue) ? performanceProfileValue : {};
   const sogRuntimeObject = isObject(sogRuntimeValue) ? sogRuntimeValue : {};
   const mobileOverridesObject = isObject(mobileOverridesValue) ? mobileOverridesValue : {};
+  const analyticsObject = isObject(analyticsValue) ? analyticsValue : {};
+  if (analyticsObject.endpoint !== undefined && typeof analyticsObject.endpoint !== 'string') {
+    errors.push('"analytics.endpoint" must be a string when provided.');
+  }
+  if (analyticsObject.project !== undefined && typeof analyticsObject.project !== 'string') {
+    errors.push('"analytics.project" must be a string when provided.');
+  }
   const particleIntroValue = revealObject.particleIntro;
   if (particleIntroValue !== undefined && !isObject(particleIntroValue)) {
     errors.push('"reveal.particleIntro" must be an object when provided.');
@@ -748,6 +766,11 @@ export function validateSceneConfig(raw: unknown): { ok: true; data: SceneConfig
         ? mobileOverridesObject.cooldownTicks
         : undefined,
     },
+    analytics: {
+      enabled: typeof analyticsObject.enabled === 'boolean' ? analyticsObject.enabled : false,
+      endpoint: typeof analyticsObject.endpoint === 'string' ? analyticsObject.endpoint : '',
+      project: typeof analyticsObject.project === 'string' ? analyticsObject.project : id,
+    },
     interiorView: {
       enabled: typeof interiorObject.enabled === 'boolean' ? interiorObject.enabled : false,
       target: isVec3(interiorObject.target) ? interiorObject.target : [0, 0, 0],
@@ -798,7 +821,7 @@ export function validateSceneConfig(raw: unknown): { ok: true; data: SceneConfig
       logo: {
         enabled: typeof brandingLogoObject.enabled === 'boolean' ? brandingLogoObject.enabled : false,
         src: typeof brandingLogoObject.src === 'string' ? brandingLogoObject.src : '',
-        alt: typeof brandingLogoObject.alt === 'string' ? brandingLogoObject.alt : 'Hodsock Priory',
+        alt: typeof brandingLogoObject.alt === 'string' ? brandingLogoObject.alt : 'Scrooby Manor',
         position:
           brandingLogoObject.position === 'top-right' || brandingLogoObject.position === 'top-left'
             ? brandingLogoObject.position
@@ -1005,35 +1028,14 @@ export function validateSceneConfig(raw: unknown): { ok: true; data: SceneConfig
     errors.push('"branding.logo.src" must be a non-empty string when branding.logo.enabled is true.');
   }
 
-  if (config.id === 'hodsock-gatehouse') {
-    for (const asset of config.assets) {
-      const normalized = asset.src.toLowerCase();
-      if (!normalized.endsWith('.sog') && !normalized.endsWith('lod-meta.json')) {
-        errors.push(
-          `Hodsock SOG-native mode requires ".sog" or "lod-meta.json" asset sources. Invalid src: "${asset.src}".`,
-        );
-      }
-      if (
-        asset.mobileSrc &&
-        !asset.mobileSrc.toLowerCase().endsWith('.sog') &&
-        !asset.mobileSrc.toLowerCase().endsWith('lod-meta.json')
-      ) {
-        errors.push(
-          `Hodsock SOG-native mode requires ".sog" or "lod-meta.json" mobileSrc values. Invalid mobileSrc: "${asset.mobileSrc}".`,
-        );
-      }
-      if (asset.fallbackSrc) {
-        errors.push(`Hodsock SOG-native mode does not allow fallbackSrc. Remove fallbackSrc from "${asset.id}".`);
-      }
-    }
-  }
-
   config.interiorView.softness = Math.min(0.6, Math.max(0.05, config.interiorView.softness));
   config.interiorView.fadeAlpha = Math.min(1, Math.max(0, config.interiorView.fadeAlpha));
   config.annotations.ui.declutter.unselectedAlpha = Math.min(1, Math.max(0, config.annotations.ui.declutter.unselectedAlpha));
   config.annotations.ui.declutter.maxVisibleUnselected = Math.max(0, Math.floor(config.annotations.ui.declutter.maxVisibleUnselected));
   config.annotations.ui.occlusion.fadeAlpha = Math.min(1, Math.max(0, config.annotations.ui.occlusion.fadeAlpha));
   config.annotations.pins.sort((a, b) => a.order - b.order);
+  config.analytics.endpoint = config.analytics.endpoint.trim();
+  config.analytics.project = config.analytics.project.trim() || config.id;
 
   if (errors.length > 0) {
     return { ok: false, errors };

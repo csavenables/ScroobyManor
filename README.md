@@ -8,7 +8,7 @@
 - Scene config loading and runtime schema validation with friendly error states.
 - Configurable camera home view, orbit/pan/zoom limits, and smooth reset transitions.
 - Multi-splat scene loading with supported runtime formats: `.ply`, `.splat`, `.ksplat`, `.spz`, `.sog`.
-- Hodsock scene uses SOG-native runtime loading (no KSPLAT fallback in production scene config).
+- Scrooby scene uses SOG-native runtime loading (no KSPLAT fallback in production scene config).
 - Fade-out/fade-in scene transitions and basic loading UX.
 - Per-splat bottom-up reveal / downward dissolve driven by `scene.json` reveal config.
 - Optional `particleIntro` reveal mode for hero-style splat intros.
@@ -51,7 +51,7 @@ npm run preview
 4. Add the new scene to `public/scenes/manifest.json`.
 5. Load with query param, e.g. `?scene=clientSceneId`.
 
-Default startup scene is `hodsock-gatehouse`.
+Default startup scene is `sm-orbit-1-trimmed`.
 
 ## Runtime Query Params
 
@@ -126,8 +126,8 @@ npm run convert:sog:lod
 
 Outputs per preset:
 
-- `public/scenes/hodsock-gatehouse/splats/sog/<preset>/scene.sog`
-- `public/scenes/hodsock-gatehouse/splats/sog/<preset>/lod/lod-meta.json`
+- `public/scenes/sm-orbit-1-trimmed/splats/sog/<preset>/scene.sog`
+- `public/scenes/sm-orbit-1-trimmed/splats/sog/<preset>/lod/lod-meta.json`
 
 Combined size + startup benchmark:
 
@@ -135,7 +135,7 @@ Combined size + startup benchmark:
 npm run bench:size-and-startup
 ```
 
-Note: Hodsock scene policy is SOG-native (`assets[].src` must be `.sog` and `fallbackSrc` is rejected by schema validation).
+Note: Scrooby scene policy is SOG-native (`assets[].src` must be `.sog` and `fallbackSrc` is rejected by schema validation).
 
 ### Performance Profile (Scene JSON)
 

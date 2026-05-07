@@ -18,37 +18,24 @@ export interface AppShellOptions {
   onReplay?: () => void;
 }
 
-const THEME_STORAGE_KEY = 'hodsock.viewer.theme';
-const DRAG_HINT_DELAY_MS = 1000;
-const END_LIGHTBOX_DELAY_MS = 30000;
 const END_LIGHTBOX_DISMISS_MS = 260;
 const ENTRY_LOAD_RING_HIDE_MS = 170;
 const ENTRY_LOAD_REVEAL_LEAD_MS = 120;
-const HODSOCK_WEBSITE_URL = 'https://www.hodsockpriory.com';
+const SCROOBY_WEBSITE_URL = 'https://csavenables.github.io/ScroobyManor/';
 const CHRISTIAN_LINKTREE_URL = 'https://linktr.ee/Csavenables';
-const FORCE_LOGO_ALT = 'Hodsock Priory';
-const FORCE_LOGO_SOURCES = ['./main-logo.svg', 'main-logo.svg', 'branding/main-logo.svg', './branding/main-logo.svg'] as const;
 type ThemeMode = 'light' | 'dark';
 
 function readStoredTheme(): ThemeMode {
-  try {
-    const raw = window.localStorage.getItem(THEME_STORAGE_KEY);
-    return raw === 'dark' ? 'dark' : 'light';
-  } catch {
-    return 'light';
-  }
-}
-
-function persistTheme(theme: ThemeMode): void {
-  try {
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-  } catch {
-    // no-op
-  }
+  return 'dark';
 }
 
 type ShellActions = Parameters<typeof createToolbar>[1] & {
   onThemeChange?: (theme: ThemeMode) => void;
+  onTelemetryEvent?: (
+    name: string,
+    payload?: Record<string, unknown>,
+    category?: 'viewer' | 'ui' | 'cta' | 'perf' | 'error' | 'annotation',
+  ) => void;
 };
 
 export function createAppShell(
@@ -61,27 +48,23 @@ export function createAppShell(
   const annotationAuthoring = options.annotationAuthoring ?? false;
   const replayButtonVisible = options.replayButtonVisible ?? embedMode;
   container.innerHTML = `
-    <div class="app-shell${embedMode ? ' app-shell-embed' : ''} entry-active">
+    <div class="app-shell${embedMode ? ' app-shell-embed' : ''}">
       <header class="app-header${controlsVisible ? '' : ' hidden'}">
         <h1 class="app-title">3DGSViewerV1</h1>
         <p class="scene-title">Scene</p>
       </header>
       <main class="viewer-root">
         <section class="viewer-host" id="viewer-host"></section>
+        <div class="hero-wordmark" aria-hidden="true">
+          <span class="hero-wordmark-kicker">welcome to:</span>
+          <span class="hero-wordmark-title">Scrooby Manor</span>
+        </div>
         <div class="brand-logo hidden" data-branding-logo>
           <img alt="" loading="eager" decoding="async" />
         </div>
-        <div class="entry-overlay" data-entry-overlay>
-          <div class="entry-overlay-content">
-            <h2 class="entry-title">
-              <span class="entry-title-desktop">Explore<br />Hodsock Priory<br />Before You Visit</span>
-              <span class="entry-title-mobile">Explore<br />Hodsock Priory<br />Before You Visit</span>
-            </h2>
-            <p class="entry-subline">An interactive preview designed to give couples a true sense of the space</p>
-            <button type="button" class="entry-button" data-enter-experience>Enter Experience</button>
-            <div class="entry-load-ring hidden" data-entry-load-ring aria-hidden="true">
-              <span class="entry-load-ring-inner"></span>
-            </div>
+        <div class="entry-overlay hidden" data-entry-overlay>
+          <div class="entry-load-ring hidden" data-entry-load-ring aria-hidden="true">
+            <span class="entry-load-ring-inner"></span>
           </div>
         </div>
         <div class="drag-instruction hidden" data-drag-instruction>Drag to explore</div>
@@ -89,7 +72,7 @@ export function createAppShell(
           <div class="end-lightbox-panel">
             <p class="end-lightbox-copy">
               <span class="end-lightbox-line">Imagine couples exploring the estate like this before booking a visit.</span>
-              <span class="end-lightbox-line">A more immersive first impression for Hodsock Priory.</span>
+              <span class="end-lightbox-line">A more immersive first impression for Scrooby Manor.</span>
               <span class="end-lightbox-line">
                 Pilot concept by
                 <a
@@ -106,11 +89,11 @@ export function createAppShell(
               <a
                 class="end-lightbox-link"
                 data-end-lightbox-visit
-                href="${HODSOCK_WEBSITE_URL}"
+                href="${SCROOBY_WEBSITE_URL}"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Visit Hodsock Priory
+                Visit Scrooby Manor
               </a>
               <button type="button" class="end-lightbox-close" data-end-lightbox-close>Continue exploring</button>
             </div>
@@ -181,7 +164,6 @@ export function createAppShell(
         <button type="button" class="fullscreen-fab hidden" data-fullscreen-fab aria-label="Toggle fullscreen">
           Fullscreen
         </button>
-        <button type="button" class="theme-fab" data-theme-fab aria-label="Toggle theme"></button>
       </main>
       <div class="error-panel hidden" role="alert">
         <h2 class="error-title"></h2>
@@ -198,7 +180,6 @@ export function createAppShell(
   const overlay = container.querySelector<HTMLElement>('.transition-overlay');
   const annotationHost = container.querySelector<HTMLElement>('#annotation-host');
   const entryOverlay = container.querySelector<HTMLElement>('[data-entry-overlay]');
-  const enterExperienceButton = container.querySelector<HTMLButtonElement>('[data-enter-experience]');
   const entryLoadRing = container.querySelector<HTMLElement>('[data-entry-load-ring]');
   const dragInstruction = container.querySelector<HTMLElement>('[data-drag-instruction]');
   const endLightbox = container.querySelector<HTMLElement>('[data-end-lightbox]');
@@ -206,7 +187,6 @@ export function createAppShell(
   const endLightboxVisit = container.querySelector<HTMLAnchorElement>('[data-end-lightbox-visit]');
   const annotationFab = container.querySelector<HTMLButtonElement>('[data-annotation-fab]');
   const fullscreenFab = container.querySelector<HTMLButtonElement>('[data-fullscreen-fab]');
-  const themeFab = container.querySelector<HTMLButtonElement>('[data-theme-fab]');
   const brandingLogo = container.querySelector<HTMLElement>('[data-branding-logo]');
   const brandingLogoImage = brandingLogo?.querySelector<HTMLImageElement>('img') ?? null;
   const errorPanel = container.querySelector<HTMLElement>('.error-panel');
@@ -223,7 +203,6 @@ export function createAppShell(
     !overlay ||
     !annotationHost ||
     !entryOverlay ||
-    !enterExperienceButton ||
     !entryLoadRing ||
     !dragInstruction ||
     !endLightbox ||
@@ -231,7 +210,6 @@ export function createAppShell(
     !endLightboxVisit ||
     !annotationFab ||
     !fullscreenFab ||
-    !themeFab ||
     !brandingLogo ||
     !brandingLogoImage ||
     !errorPanel ||
@@ -247,55 +225,26 @@ export function createAppShell(
 
   const loader: LoaderController = createLoader(viewerHost);
   const toolbar = createToolbar(footer, actions);
-  let currentLogoCandidates: string[] = [];
-  let currentLogoCandidateIndex = 0;
-  const applyLogoSource = (source: string, alt: string): void => {
-    brandingLogoImage.alt = alt || FORCE_LOGO_ALT;
-    brandingLogoImage.src = source;
-    brandingLogo.classList.remove('hidden');
+  const emitTelemetry = (
+    name: string,
+    payload: Record<string, unknown> = {},
+    category: 'viewer' | 'ui' | 'cta' | 'perf' | 'error' | 'annotation' = 'ui',
+  ): void => {
+    actions.onTelemetryEvent?.(name, payload, category);
   };
-  const setLogoWithFallbacks = (sources: readonly string[], alt: string): void => {
-    currentLogoCandidates = Array.from(new Set(sources.filter((source) => source.trim().length > 0)));
-    currentLogoCandidateIndex = 0;
-    if (currentLogoCandidates.length === 0) {
-      return;
-    }
-    applyLogoSource(currentLogoCandidates[0], alt);
-  };
-  brandingLogoImage.onerror = () => {
-    const failedSource = currentLogoCandidates[currentLogoCandidateIndex] ?? brandingLogoImage.src;
-    console.warn(`[branding] logo source failed: ${failedSource}`);
-    if (currentLogoCandidateIndex >= currentLogoCandidates.length - 1) {
-      return;
-    }
-    currentLogoCandidateIndex += 1;
-    applyLogoSource(currentLogoCandidates[currentLogoCandidateIndex], brandingLogoImage.alt || FORCE_LOGO_ALT);
-  };
-  brandingLogoImage.onload = () => {
-    brandingLogo.classList.remove('hidden');
-  };
-  // Force an immediate logo on boot, then allow scene branding config to override if present.
-  brandingLogo.classList.remove('hidden');
-  brandingLogo.dataset.position = 'top-left';
-  setLogoWithFallbacks(FORCE_LOGO_SOURCES, FORCE_LOGO_ALT);
+  brandingLogo.classList.add('hidden');
   let themeMode: ThemeMode = readStoredTheme();
   const applyTheme = (nextTheme: ThemeMode): void => {
     themeMode = nextTheme;
     appShell.classList.toggle('theme-light', themeMode === 'light');
     appShell.classList.toggle('theme-dark', themeMode === 'dark');
-    themeFab.textContent = themeMode === 'dark' ? '\u2600' : '\u263E';
-    themeFab.setAttribute(
-      'aria-label',
-      themeMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode',
-    );
-  };
-  const setTheme = (nextTheme: ThemeMode): void => {
-    applyTheme(nextTheme);
-    persistTheme(nextTheme);
-    actions.onThemeChange?.(nextTheme);
   };
   applyTheme(themeMode);
-  replayButton.onclick = () => options.onReplay?.();
+  replayButton.onclick = () => {
+    emitTelemetry('button_pressed', { button_id: 'replay', context: 'floating_controls' }, 'ui');
+    emitTelemetry('replay_clicked', { context: 'floating_controls' }, 'ui');
+    options.onReplay?.();
+  };
   const syncFullscreenFab = (): void => {
     const enabled = actions.isFullscreen();
     fullscreenFab.classList.toggle('active', enabled);
@@ -306,12 +255,11 @@ export function createAppShell(
     );
   };
   fullscreenFab.onclick = () => {
+    emitTelemetry('button_pressed', { button_id: 'fullscreen_toggle', context: 'floating_controls' }, 'ui');
     const enable = !actions.isFullscreen();
     actions.onToggleFullscreen(enable);
+    emitTelemetry('fullscreen_toggled', { enabled: enable, context: 'floating_controls' }, 'ui');
     syncFullscreenFab();
-  };
-  themeFab.onclick = () => {
-    setTheme(themeMode === 'light' ? 'dark' : 'light');
   };
   document.addEventListener('fullscreenchange', syncFullscreenFab);
   let activeToolbarConfig: SceneConfig | null = null;
@@ -459,35 +407,24 @@ export function createAppShell(
     syncAnnotationFab();
   };
   annotationFab.onclick = () => {
+    emitTelemetry('button_pressed', { button_id: 'annotation_fab_toggle', context: 'floating_controls' }, 'annotation');
     annotationPanelOpen = !annotationPanelOpen;
+    emitTelemetry(
+      'annotation_panel_toggled',
+      { open: annotationPanelOpen, context: 'floating_controls' },
+      'annotation',
+    );
     syncAnnotationEditorVisibility();
   };
-  let dragInstructionTimer = 0;
   let dragInstructionHideTimer = 0;
-  let endLightboxTimer = 0;
   let hasEnteredExperience = false;
   let hasInteractionSinceEnter = false;
-  let endLightboxDismissed = false;
-  const clearDragInstructionTimer = (): void => {
-    if (!dragInstructionTimer) {
-      return;
-    }
-    window.clearTimeout(dragInstructionTimer);
-    dragInstructionTimer = 0;
-  };
   const clearDragInstructionHideTimer = (): void => {
     if (!dragInstructionHideTimer) {
       return;
     }
     window.clearTimeout(dragInstructionHideTimer);
     dragInstructionHideTimer = 0;
-  };
-  const clearEndLightboxTimer = (): void => {
-    if (!endLightboxTimer) {
-      return;
-    }
-    window.clearTimeout(endLightboxTimer);
-    endLightboxTimer = 0;
   };
   const hideDragInstruction = (): void => {
     clearDragInstructionHideTimer();
@@ -499,18 +436,8 @@ export function createAppShell(
       dragInstruction.classList.add('hidden');
     }, 180);
   };
-  const showDragInstruction = (): void => {
-    if (!hasEnteredExperience || hasInteractionSinceEnter) {
-      return;
-    }
-    dragInstruction.classList.remove('hidden');
-    requestAnimationFrame(() => {
-      dragInstruction.classList.add('is-visible');
-    });
-  };
   const dismissEndLightbox = (): void => {
     if (endLightbox.classList.contains('hidden')) {
-      endLightboxDismissed = true;
       return;
     }
     endLightbox.classList.remove('is-visible');
@@ -519,16 +446,6 @@ export function createAppShell(
       endLightbox.classList.add('hidden');
       endLightbox.classList.remove('is-dismissed');
     }, END_LIGHTBOX_DISMISS_MS);
-    endLightboxDismissed = true;
-  };
-  const showEndLightbox = (): void => {
-    if (!hasEnteredExperience || endLightboxDismissed) {
-      return;
-    }
-    endLightbox.classList.remove('hidden');
-    requestAnimationFrame(() => {
-      endLightbox.classList.add('is-visible');
-    });
   };
   const markInteraction = (): void => {
     if (!hasEnteredExperience || hasInteractionSinceEnter) {
@@ -544,45 +461,30 @@ export function createAppShell(
   };
   bindPostEnterInteraction();
   endLightboxClose.onclick = () => {
+    emitTelemetry('button_pressed', { button_id: 'continue_exploring', context: 'end_lightbox' }, 'cta');
+    emitTelemetry('continue_exploring_clicked', { context: 'end_lightbox' }, 'cta');
     dismissEndLightbox();
   };
   endLightboxVisit.onclick = () => {
+    emitTelemetry('button_pressed', { button_id: 'visit_scrooby_manor', context: 'end_lightbox' }, 'cta');
+    emitTelemetry(
+      'website_cta_clicked',
+      { cta_id: 'visit_scrooby_manor', destination: SCROOBY_WEBSITE_URL, context: 'end_lightbox' },
+      'cta',
+    );
     dismissEndLightbox();
-  };
-  enterExperienceButton.onclick = () => {
-    if (!appShell.classList.contains('entry-active')) {
-      return;
-    }
-    entryLoadDismissed = true;
-    resolveEntryLoadBarrier();
-    hideEntryLoadRing();
-    hasEnteredExperience = true;
-    hasInteractionSinceEnter = false;
-    clearDragInstructionTimer();
-    clearEndLightboxTimer();
-    hideDragInstruction();
-    endLightbox.classList.add('hidden');
-    endLightbox.classList.remove('is-visible', 'is-dismissed');
-    dragInstructionTimer = window.setTimeout(() => {
-      showDragInstruction();
-    }, DRAG_HINT_DELAY_MS);
-    endLightboxTimer = window.setTimeout(() => {
-      showEndLightbox();
-    }, END_LIGHTBOX_DELAY_MS);
-    entryOverlay.classList.add('is-dismissed');
-    window.setTimeout(() => {
-      appShell.classList.remove('entry-active');
-      entryOverlay.classList.add('hidden');
-    }, 520);
   };
   const setBrandingLogo = (logo: BrandingLogoConfig | null): void => {
     if (!logo || !logo.enabled || !logo.src) {
-      brandingLogo.dataset.position = 'top-left';
-      setLogoWithFallbacks(FORCE_LOGO_SOURCES, FORCE_LOGO_ALT);
+      brandingLogo.classList.add('hidden');
+      brandingLogoImage.src = '';
+      brandingLogoImage.alt = '';
       return;
     }
     brandingLogo.dataset.position = logo.position;
-    setLogoWithFallbacks([logo.src, ...FORCE_LOGO_SOURCES], logo.alt || FORCE_LOGO_ALT);
+    brandingLogoImage.alt = logo.alt || 'Brand logo';
+    brandingLogoImage.src = logo.src;
+    brandingLogo.classList.remove('hidden');
   };
   const getAnnInput = (key: string): HTMLInputElement | null =>
     annotationEditor.querySelector<HTMLInputElement>(`[data-ann="${key}"]`);

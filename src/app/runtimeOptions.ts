@@ -1,8 +1,10 @@
 export interface RuntimeOptions {
   sceneId: string;
   embed: boolean;
+  pivotDebug: boolean;
   autorotateOverride: boolean | null;
   mobileProfileOverride: boolean | null;
+  analyticsOverride: boolean | null;
   controlsVisible: boolean;
   replayButtonVisible: boolean;
   annotate: boolean;
@@ -34,9 +36,10 @@ function parseOrigin(value: string | null): string | null {
   }
 }
 
-export function readRuntimeOptions(search: string, defaultSceneId = 'hodsock-gatehouse'): RuntimeOptions {
+export function readRuntimeOptions(search: string, defaultSceneId = 'sm-orbit-1-trimmed'): RuntimeOptions {
   const params = new URLSearchParams(search);
-  const sceneId = params.get('scene') ?? defaultSceneId;
+  void params;
+  const sceneId = defaultSceneId;
   const embedDefault = sceneId === defaultSceneId;
   const embed = parseBooleanFlag(params.get('embed')) ?? embedDefault;
   const controlsVisible = parseBooleanFlag(params.get('controls')) ?? !embed;
@@ -44,8 +47,10 @@ export function readRuntimeOptions(search: string, defaultSceneId = 'hodsock-gat
   return {
     sceneId,
     embed,
+    pivotDebug: parseBooleanFlag(params.get('pivot')) ?? false,
     autorotateOverride: parseBooleanFlag(params.get('autorotate')),
     mobileProfileOverride: parseBooleanFlag(params.get('mobileProfile')),
+    analyticsOverride: parseBooleanFlag(params.get('analytics')),
     controlsVisible,
     replayButtonVisible,
     annotate: parseBooleanFlag(params.get('annotate')) ?? false,
