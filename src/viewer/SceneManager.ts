@@ -70,6 +70,37 @@ export class SceneManager {
     return this.handleById.get(this.currentActiveId) ?? null;
   }
 
+  nudgeActiveScenePosition(delta: THREE.Vector3): void {
+    if (delta.lengthSq() === 0) {
+      return;
+    }
+    for (const handle of this.activeHandles) {
+      handle.object3D.position.add(delta);
+    }
+    if (!this.activeConfig) {
+      return;
+    }
+    this.activeConfig.assets = this.activeConfig.assets.map((asset) => ({
+      ...asset,
+      transform: {
+        ...asset.transform,
+        position: [
+          asset.transform.position[0] + delta.x,
+          asset.transform.position[1] + delta.y,
+          asset.transform.position[2] + delta.z,
+        ],
+      },
+    }));
+  }
+
+  getPrimaryAssetPosition(): [number, number, number] | null {
+    const primary = this.activeConfig?.assets[0];
+    if (!primary) {
+      return null;
+    }
+    return [...primary.transform.position];
+  }
+
   async loadScene(sceneId: string): Promise<SceneConfig> {
     this.opVersion += 1;
     const loadVersion = this.opVersion;

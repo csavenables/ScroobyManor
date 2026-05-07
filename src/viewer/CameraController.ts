@@ -31,6 +31,12 @@ export interface CameraAnimateOptions {
   durationMs: number;
 }
 
+export interface CameraPose {
+  position: [number, number, number];
+  target: [number, number, number];
+  fov: number;
+}
+
 export class CameraController {
   private readonly controls: OrbitControls;
   private cameraAnimation: CameraAnimation | null = null;
@@ -100,6 +106,20 @@ export class CameraController {
       target: [this.controls.target.x, this.controls.target.y, this.controls.target.z],
       fov: this.camera.fov,
     };
+  }
+
+  getCurrentPose(): CameraPose {
+    return {
+      position: [this.camera.position.x, this.camera.position.y, this.camera.position.z],
+      target: [this.controls.target.x, this.controls.target.y, this.controls.target.z],
+      fov: this.camera.fov,
+    };
+  }
+
+  nudgePivotWorld(delta: THREE.Vector3): void {
+    this.controls.target.add(delta);
+    this.camera.position.add(delta);
+    this.controls.update();
   }
 
   getTarget(out: THREE.Vector3): void {

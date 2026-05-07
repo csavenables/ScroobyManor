@@ -14,6 +14,11 @@ interface AnnotationManagerOptions {
   scene: THREE.Scene;
   cameraController: CameraController;
   onCloseSelection?: () => void;
+  onTelemetryEvent?: (
+    name: string,
+    payload?: Record<string, unknown>,
+    category?: 'viewer' | 'ui' | 'cta' | 'perf' | 'error' | 'annotation',
+  ) => void;
 }
 
 export interface AnnotationEditorPin {
@@ -57,7 +62,7 @@ export class AnnotationManager {
 
   constructor(private readonly options: AnnotationManagerOptions) {
     this.overlay = new AnnotationOverlay(options.host, {
-      onSelect: (id) => this.selectAnnotation(id),
+      onSelect: (id) => this.selectAnnotation(id, 'pin'),
       onPrev: () => this.selectPrev(),
       onNext: () => this.selectNext(),
       onClose: () => this.close(),
@@ -80,7 +85,7 @@ export class AnnotationManager {
     this.overlay.setVisible(Boolean(this.config && this.pins.length > 0));
     this.resetControlProfile();
     if (this.config?.defaultSelectedId) {
-      this.selectAnnotation(this.config.defaultSelectedId);
+      this.selectAnnotation(this.config.defaultSelectedId, 'programmatic');
     }
     this.emitEditorState();
   }
@@ -153,7 +158,7 @@ export class AnnotationManager {
     this.emitEditorState();
   }
 
-  selectAnnotation(id: string): void {
+  selectAnnotation(id: string, source: 'pin' | 'prev' | 'next' | 'programmatic' = 'programmatic'): void {
     const pin = this.pins.find((entry) => entry.id === id);
     if (!pin) {
       return;
@@ -167,6 +172,18 @@ export class AnnotationManager {
       fov: pin.camera.fov,
       durationMs: pin.camera.transitionMs * ANNOTATION_CAMERA_TRANSITION_MULTIPLIER,
     });
+    if (source !== 'programmatic') {
+      this.options.onTelemetryEvent?.(
+        'annotation_pin_selected',
+        {
+          pin_id: pin.id,
+          pin_order: pin.order,
+          asset_id: pin.assetId ?? this.activeAssetId ?? null,
+          source,
+        },
+        'annotation',
+      );
+    }
     this.emitEditorState();
   }
 
@@ -422,12 +439,24 @@ export class AnnotationManager {
       return;
     }
     if (!this.selectedId) {
-      this.selectAnnotation(visiblePins[0].id);
+      this.options.onTelemetryEvent?.(
+        'button_pressed',
+        { button_id: 'annotation_prev', context: 'annotation_nav' },
+        'annotation',
+      );
+      this.options.onTelemetryEvent?.('annotation_prev', { wrapped: false, source: 'none_selected' }, 'annotation');
+      this.selectAnnotation(visiblePins[0].id, 'prev');
       return;
     }
     const index = visiblePins.findIndex((pin) => pin.id === this.selectedId);
     if (index < 0) {
-      this.selectAnnotation(visiblePins[0].id);
+      this.options.onTelemetryEvent?.(
+        'button_pressed',
+        { button_id: 'annotation_prev', context: 'annotation_nav' },
+        'annotation',
+      );
+      this.options.onTelemetryEvent?.('annotation_prev', { wrapped: false, source: 'missing_selected' }, 'annotation');
+      this.selectAnnotation(visiblePins[0].id, 'prev');
       return;
     }
     const nextIndex = index <= 0
@@ -438,7 +467,17 @@ export class AnnotationManager {
     if (nextIndex === index && !(this.config?.ui.wrapNavigation ?? true)) {
       return;
     }
-    this.selectAnnotation(visiblePins[nextIndex].id);
+    this.options.onTelemetryEvent?.(
+      'button_pressed',
+      { button_id: 'annotation_prev', context: 'annotation_nav' },
+      'annotation',
+    );
+    this.options.onTelemetryEvent?.(
+      'annotation_prev',
+      { wrapped: nextIndex > index, from_pin_id: visiblePins[index].id, to_pin_id: visiblePins[nextIndex].id },
+      'annotation',
+    );
+    this.selectAnnotation(visiblePins[nextIndex].id, 'prev');
   }
 
   private selectNext(): void {
@@ -447,12 +486,24 @@ export class AnnotationManager {
       return;
     }
     if (!this.selectedId) {
-      this.selectAnnotation(visiblePins[0].id);
+      this.options.onTelemetryEvent?.(
+        'button_pressed',
+        { button_id: 'annotation_next', context: 'annotation_nav' },
+        'annotation',
+      );
+      this.options.onTelemetryEvent?.('annotation_next', { wrapped: false, source: 'none_selected' }, 'annotation');
+      this.selectAnnotation(visiblePins[0].id, 'next');
       return;
     }
     const index = visiblePins.findIndex((pin) => pin.id === this.selectedId);
     if (index < 0) {
-      this.selectAnnotation(visiblePins[0].id);
+      this.options.onTelemetryEvent?.(
+        'button_pressed',
+        { button_id: 'annotation_next', context: 'annotation_nav' },
+        'annotation',
+      );
+      this.options.onTelemetryEvent?.('annotation_next', { wrapped: false, source: 'missing_selected' }, 'annotation');
+      this.selectAnnotation(visiblePins[0].id, 'next');
       return;
     }
     const nextIndex = index >= visiblePins.length - 1
@@ -463,12 +514,28 @@ export class AnnotationManager {
     if (nextIndex === index && !(this.config?.ui.wrapNavigation ?? true)) {
       return;
     }
-    this.selectAnnotation(visiblePins[nextIndex].id);
+    this.options.onTelemetryEvent?.(
+      'button_pressed',
+      { button_id: 'annotation_next', context: 'annotation_nav' },
+      'annotation',
+    );
+    this.options.onTelemetryEvent?.(
+      'annotation_next',
+      { wrapped: nextIndex < index, from_pin_id: visiblePins[index].id, to_pin_id: visiblePins[nextIndex].id },
+      'annotation',
+    );
+    this.selectAnnotation(visiblePins[nextIndex].id, 'next');
   }
 
   private close(): void {
     this.selectedId = null;
     this.resetControlProfile();
+    this.options.onTelemetryEvent?.(
+      'button_pressed',
+      { button_id: 'annotation_close', context: 'annotation_nav' },
+      'annotation',
+    );
+    this.options.onTelemetryEvent?.('annotation_close', { context: 'annotation_nav' }, 'annotation');
     this.options.onCloseSelection?.();
     this.emitEditorState();
   }
