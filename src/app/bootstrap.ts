@@ -417,8 +417,16 @@ export function createAppShell(
     syncAnnotationEditorVisibility();
   };
   let dragInstructionHideTimer = 0;
+  let dragInstructionShowTimer = 0;
   let hasEnteredExperience = false;
   let hasInteractionSinceEnter = false;
+  const clearDragInstructionShowTimer = (): void => {
+    if (!dragInstructionShowTimer) {
+      return;
+    }
+    window.clearTimeout(dragInstructionShowTimer);
+    dragInstructionShowTimer = 0;
+  };
   const clearDragInstructionHideTimer = (): void => {
     if (!dragInstructionHideTimer) {
       return;
@@ -435,6 +443,15 @@ export function createAppShell(
     dragInstructionHideTimer = window.setTimeout(() => {
       dragInstruction.classList.add('hidden');
     }, 180);
+  };
+  const showDragInstruction = (): void => {
+    if (!hasEnteredExperience || hasInteractionSinceEnter) {
+      return;
+    }
+    dragInstruction.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      dragInstruction.classList.add('is-visible');
+    });
   };
   const dismissEndLightbox = (): void => {
     if (endLightbox.classList.contains('hidden')) {
@@ -741,6 +758,13 @@ export function createAppShell(
       entryLoadDismissed = true;
       resolveEntryLoadBarrier();
       hideEntryLoadRing();
+      hasEnteredExperience = true;
+      if (!hasInteractionSinceEnter) {
+        clearDragInstructionShowTimer();
+        dragInstructionShowTimer = window.setTimeout(() => {
+          showDragInstruction();
+        }, 420);
+      }
     },
     setBrandingLogo(logo: BrandingLogoConfig | null): void {
       setBrandingLogo(logo);
